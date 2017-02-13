@@ -1,14 +1,14 @@
 import numpy as np
 import pickle as pkl
-from cropping import batch_crop
 import tensorflow as tf
 from sklearn.metrics import accuracy_score
 
-EPOCHS = 25
+EPOCHS     = 25
+MINI_BATCH = 100
 
-DATA_PATH = "/notebooks/Data/top_down_view"
-CROP_HEIGHT, CROP_WIDTH = 60, 60
-IMG_HEIGHT, IMG_WIDTH   = 240, 320
+DATA_PATH               = "/notebooks/Data/top_down_view"
+CROP_HEIGHT, CROP_WIDTH = 60, 80
+
 
 def batch_norm(layer, dims):
 	'''
@@ -45,23 +45,14 @@ def graph(conv_depth):
 	'''
 
 	# Load the data...
-	batch_size   = tf.placeholder(dtype=tf.int32)
 	labels       = tf.placeholder(dtype=tf.int32, shape=(None,), name="labels")
-	crop_windows = tf.placeholder(dtype=tf.float32,
-		shape=(None, CROP_HEIGHT, CROP_WIDTH,3))
 	images       = tf.placeholder(dtype=tf.float32,
-		shape=(None,IMG_HEIGHT,IMG_WIDTH,3), name="images")
+		shape=(None,CROP_HEIGHT,CROP_WIDTH,3), name="images")
 
-	# Crop if crop_bool is set to True
-	crop_bool      = tf.placeholder(tf.bool, name="crop_bool")
-	current        = tf.cond(crop_bool,
-		lambda: crop_windows,
-		lambda: images
-	)
 
 	# Data Augmentation
 	augment = tf.placeholder(tf.bool, name="augment")
-	current = tf.cond(augment, lambda: data_aug(current), lambda: current)
+	current = tf.cond(augment, lambda: data_aug(images), lambda: images)
 
 	chan_in, chan_out = 3, 10
 	for i in range(1,conv_depth+1):
@@ -89,43 +80,36 @@ def graph(conv_depth):
 			)[0]
 		chan_in = i*10
 
-	return batch_size, labels, crop_windows, images, crop_bool, augment, current
+	return labels, images, augment, current
 
-batch_size, labels, crop_windows, images, crop_bool,\
- augment, current = graph(conv_depth=7)
+labels, images, augment, current = graph(conv_depth=5)
 
 init_op = tf.global_variables_initializer()
 
 print current.get_shape(), current.dtype
 
-with tf.Session() as sess:
+# with open("{0}/train.pkl".format(DATA_PATH), "rb") as f:
+# 	train_labels, train_crops = pkl.load(f)
 
+with open("{0}/test.pkl".format(DATA_PATH), "rb") as f:
+	test_labels, test_crops = pkl.load(f)
+
+# N_train, N_test = len(train_labels), len(test_labels)
+
+N_test = len(test_labels)
+
+with tf.Session() as sess:
 	
 	sess.run(init_op)
 
-	batch, mini_batch = 0, 0
+	for mb in np.array_split(range(N_test), N_test/MINI_BATCH):
 	
-	with open("{0}/top_down_view_train_{1}.pkl".format(DATA_PATH,batch), "rb") as f:
-		data = pkl.load(f)
+		C = sess.run(current, feed_dict={
+			labels: test_labels[mb],
+			images: test_crops[mb],
+			augment:False,
+			})
 
-	crop_boxes, true_labels = batch_crop(
-		data[mini_batch]["data"],
-		data[mini_batch]["labels"]
-		)
-	
-	C = sess.run(current, feed_dict={
-		batch_size: len(data[mini_batch]["bin_labels"]),
-		labels: true_labels,
-		crop_windows: crop_boxes,
-		images: data[mini_batch]["data"],
-		crop_bool: True,
-		augment:True,
-		})
+		print C.shape
 
-	print C.shape
-
-
-# Load labels into SparseTensors by passing indices (corresponding to "heads"),
-# values (all ones) and shape (which is constant -  240x320)
-
-# Might also want to assign 0.5 to pixels neighboring "head" pixels.
+		break
