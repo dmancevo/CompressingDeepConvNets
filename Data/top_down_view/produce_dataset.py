@@ -102,19 +102,22 @@ class croppingThread(threading.Thread):
 
 				for coord in label["heads"]:
 
-					if ones<=zeros and is_valid_crop(coord):
+					if is_valid_crop(coord):
 						labels[self.slots[j]] = 1
 						crops[self.slots[j]]  = crop(img, coord)
 						ones+=1
 						j+=1
+						if len(self.slots)<=j: break
 
 			elif zeros < ones:
 				labels[self.slots[j]] = 0
 				crops[self.slots[j]]  = crop(img, sample_random_coord())
 				zeros+=1
 				j+=1
-
+				
 			if len(self.slots)<=j: break
+
+			
 
 if __name__ == '__main__':
 	for tt in train_test.keys():
