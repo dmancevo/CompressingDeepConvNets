@@ -3,11 +3,11 @@ import pickle as pkl
 import tensorflow as tf
 from sklearn.metrics import accuracy_score, f1_score
 
-EPOCHS     = 5
+EPOCHS     = 15
 MINI_BATCH = 100
 FMP        = 1.414
 DEPTH      = 8
-CHANNELS   = 10
+CHANNELS   = 15
 
 DATA_PATH               = "/notebooks/Data/top_down_view"
 CROP_HEIGHT, CROP_WIDTH = 60, 80
@@ -75,8 +75,7 @@ def graph():
 	labels       = tf.placeholder(dtype=tf.int32, shape=(None,), name="labels")
 	images       = tf.placeholder(dtype=tf.float32,
 		shape=(None,CROP_HEIGHT,CROP_WIDTH,3), name="images")
-	keep_prob    = tf.placeholder(dtype=tf.float32, shape=(DEPTH+2,))
-
+	keep_prob    = tf.placeholder(dtype=tf.float32, shape=(DEPTH,))
 
 	# Data Augmentation
 	augment = tf.placeholder(tf.bool, name="augment")
@@ -101,7 +100,7 @@ def graph():
 	current = batch_norm(current, (height,width,chan_in))
 	current = conv(current, height, width, chan_in, chan_in, padding="VALID")
 	current = leaky_relu(current)
-	current = tf.nn.dropout(current, keep_prob[i])
+	current = tf.nn.dropout(current, keep_prob[-1])
 
 	current = batch_norm(current, (1,1,chan_in))
 	current = conv(current, 1, 1, chan_in, 2)
@@ -122,6 +121,8 @@ if __name__ == '__main__':
 
 	with open("{0}/test.pkl".format(DATA_PATH), "rb") as f:
 		test_labels, test_crops = pkl.load(f)
+
+	test_labels, test_crops = test_labels[:4800], test_crops[:4800]
 
 	N_train, N_test = len(train_labels), len(test_labels)
 
@@ -155,14 +156,14 @@ if __name__ == '__main__':
 				sess.run(train_step, feed_dict={
 					labels: train_labels[I],
 					images: train_crops[I],
-					keep_prob: [0., .1, .2, .3, .4, .5, .5, .5, .5, .5],
+					keep_prob: [0., .1, .2, .3, .4, .5, .5, .5],
 					augment: True,
 				})
 			
 				# train_score = sess.run(loss, feed_dict={
 				# 	labels: train_labels[I],
 				# 	images: train_crops[I],
-				# 	keep_prob: [1. for i in range(DEPTH+2)],
+				# 	keep_prob: [1. for i in range(DEPTH)],
 				# 	augment: False,
 				# })
 
@@ -170,25 +171,26 @@ if __name__ == '__main__':
 				# test_score = sess.run(loss, feed_dict={
 				# 	labels: test_labels[J],
 				# 	images: test_crops[J],
-				# 	keep_prob: [1. for i in range(DEPTH+2)],
+				# 	keep_prob: [1. for i in range(DEPTH)],
 				# 	augment: False,
 				# })
 
 				# print "train: ", train_score, "test: ", test_score
 
 			y_hat = np.empty(shape=(0,2))
-			for J in np.array_split(range(N_test),  15):
+			for J in np.array_split(range(N_test),  16):
 				y_hat = np.concatenate((
 					y_hat, sess.run(prob, feed_dict={
 					labels: test_labels[J],
 					images: test_crops[J],
-					keep_prob: [1. for i in range(DEPTH+2)],
+					keep_prob: [1. for i in range(DEPTH)],
 					augment: False,
 				})))
 
 			print "Epoch: ", epoch+1
 			print "Err: ", 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
 			print "F1 Score: ", f1_score(test_labels,np.argmax(y_hat,axis=1))
+
 		# new_saver = tf.train.Saver(max_to_keep=2)
 		# new_saver.save(sess, "saved/arch1/")
 

@@ -122,6 +122,8 @@ if __name__ == '__main__':
 	with open("{0}/test.pkl".format(DATA_PATH), "rb") as f:
 		test_labels, test_crops = pkl.load(f)
 
+	test_labels, test_crops = test_labels[:4800], test_crops[:4800]
+
 	N_train, N_test = len(train_labels), len(test_labels)
 	
 	with tf.Session() as sess:
@@ -141,7 +143,7 @@ if __name__ == '__main__':
 				})
 
 			y_hat = np.empty(shape=(0,2))
-			for J in np.array_split(range(N_test),  15):
+			for J in np.array_split(range(N_test),  16):
 				y_hat = np.concatenate((
 					y_hat, sess.run(prob, feed_dict={
 					labels: test_labels[J],
