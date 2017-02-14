@@ -3,7 +3,8 @@ import pickle as pkl
 import tensorflow as tf
 from sklearn.metrics import accuracy_score, f1_score
 
-EPOCHS     = 15
+ARCH       = "arch1"
+EPOCHS     = 1
 MINI_BATCH = 100
 FMP        = 1.414
 DEPTH      = 8
@@ -129,8 +130,8 @@ if __name__ == '__main__':
 	with tf.Session() as sess:
 
 		try:
-			saver = tf.train.import_meta_graph("saved/arch1/top_down_net.meta")
-			saver.restore(sess, tf.train.latest_checkpoint('saved/arch1/'))
+			saver = tf.train.import_meta_graph("saved/{0}.meta".format(ARCH))
+			saver.restore(sess, tf.train.latest_checkpoint("saved/"))
 			layers = tf.get_collection('layers')
 
 			print "Successfully loaded graph from file."
@@ -143,12 +144,13 @@ if __name__ == '__main__':
 			for layer in layers:
 				tf.add_to_collection('layers', layer)
 
-			labels, images, keep_prob, augment, logits, prob, loss, train_step =\
-				layers
-
 			init_op    = tf.global_variables_initializer()
 			sess.run(init_op)
 
+		labels, images, keep_prob, augment, logits, prob, loss, train_step =\
+			layers
+
+		print "Training..."
 		for epoch in range(EPOCHS):
 			for __ in range(N_train/MINI_BATCH):
 
@@ -159,23 +161,6 @@ if __name__ == '__main__':
 					keep_prob: [0., .1, .2, .3, .4, .5, .5, .5],
 					augment: True,
 				})
-			
-				# train_score = sess.run(loss, feed_dict={
-				# 	labels: train_labels[I],
-				# 	images: train_crops[I],
-				# 	keep_prob: [1. for i in range(DEPTH)],
-				# 	augment: False,
-				# })
-
-				# J = np.random.choice(range(N_test), size=100, replace=False)
-				# test_score = sess.run(loss, feed_dict={
-				# 	labels: test_labels[J],
-				# 	images: test_crops[J],
-				# 	keep_prob: [1. for i in range(DEPTH)],
-				# 	augment: False,
-				# })
-
-				# print "train: ", train_score, "test: ", test_score
 
 			y_hat = np.empty(shape=(0,2))
 			for J in np.array_split(range(N_test),  16):
@@ -191,7 +176,7 @@ if __name__ == '__main__':
 			print "Err: ", 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
 			print "F1 Score: ", f1_score(test_labels,np.argmax(y_hat,axis=1))
 
-		# new_saver = tf.train.Saver(max_to_keep=2)
-		# new_saver.save(sess, "saved/arch1/")
+		new_saver = tf.train.Saver(max_to_keep=2)
+		new_saver.save(sess, "saved/{0}".format(ARCH))
 
 print "Done!"
