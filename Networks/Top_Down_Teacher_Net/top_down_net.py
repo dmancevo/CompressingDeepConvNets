@@ -3,12 +3,17 @@ import pickle as pkl
 import tensorflow as tf
 from sklearn.metrics import accuracy_score, f1_score
 
-ARCH       = "arch1"
-EPOCHS     = 1
+CHKPT      = "chkpt0"
+MIN_ERR    = 0.046
+
+EPOCHS     = 40
 MINI_BATCH = 100
 FMP        = 1.414
 DEPTH      = 8
-CHANNELS   = 15
+CHANNELS   = 30
+
+TOTAL_EPOCHS = 0
+SAVED_EPOCHS = TOTAL_EPOCHS
 
 DATA_PATH               = "/notebooks/Data/top_down_view"
 CROP_HEIGHT, CROP_WIDTH = 60, 80
@@ -130,7 +135,7 @@ if __name__ == '__main__':
 	with tf.Session() as sess:
 
 		try:
-			saver = tf.train.import_meta_graph("saved/{0}.meta".format(ARCH))
+			saver = tf.train.import_meta_graph("saved/{0}.meta".format(CHKPT))
 			saver.restore(sess, tf.train.latest_checkpoint("saved/"))
 			layers = tf.get_collection('layers')
 
@@ -158,7 +163,7 @@ if __name__ == '__main__':
 				sess.run(train_step, feed_dict={
 					labels: train_labels[I],
 					images: train_crops[I],
-					keep_prob: [0., .1, .2, .3, .4, .5, .5, .5],
+					keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
 					augment: True,
 				})
 
@@ -172,11 +177,18 @@ if __name__ == '__main__':
 					augment: False,
 				})))
 
-			print "Epoch: ", epoch+1
-			print "Err: ", 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
+			print "Epoch: ", TOTAL_EPOCHS+epoch+1
+			err = 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
+			print "Err: ", err
 			print "F1 Score: ", f1_score(test_labels,np.argmax(y_hat,axis=1))
 
-		new_saver = tf.train.Saver(max_to_keep=2)
-		new_saver.save(sess, "saved/{0}".format(ARCH))
+			if err < MIN_ERR:
+				print "Saving..."
+				MIN_ERR = err
+				SAVED_EPOCHS = TOTAL_EPOCHS+epoch+1
+				new_saver = tf.train.Saver(max_to_keep=2)
+				new_saver.save(sess, "saved/{0}".format(CHKPT))
 
+print "SAVED EPOCHS: ", SAVED_EPOCHS
+print "MIN ERR: ", MIN_ERR
 print "Done!"
