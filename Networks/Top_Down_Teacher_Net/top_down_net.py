@@ -3,10 +3,9 @@ import pickle as pkl
 import tensorflow as tf
 from sklearn.metrics import accuracy_score, f1_score
 
-CHKPT      = "chkpt0"
 MIN_ERR    = 0.046
 
-EPOCHS     = 40
+EPOCHS     = 50
 MINI_BATCH = 100
 FMP        = 1.414
 DEPTH      = 8
@@ -128,6 +127,8 @@ if __name__ == '__main__':
 	with open("{0}/test.pkl".format(DATA_PATH), "rb") as f:
 		test_labels, test_crops = pkl.load(f)
 
+
+	train_labels, train_crops = train_labels[:16300], train_crops[:16300]
 	test_labels, test_crops = test_labels[:4800], test_crops[:4800]
 
 	N_train, N_test = len(train_labels), len(test_labels)
@@ -135,7 +136,7 @@ if __name__ == '__main__':
 	with tf.Session() as sess:
 
 		try:
-			saver = tf.train.import_meta_graph("saved/{0}.meta".format(CHKPT))
+			saver = tf.train.import_meta_graph("saved/top_down_net.meta")
 			saver.restore(sess, tf.train.latest_checkpoint("saved/"))
 			layers = tf.get_collection('layers')
 
@@ -187,7 +188,7 @@ if __name__ == '__main__':
 				MIN_ERR = err
 				SAVED_EPOCHS = TOTAL_EPOCHS+epoch+1
 				new_saver = tf.train.Saver(max_to_keep=2)
-				new_saver.save(sess, "saved/{0}".format(CHKPT))
+				new_saver.save(sess, "saved/top_down_net")
 
 print "SAVED EPOCHS: ", SAVED_EPOCHS
 print "MIN ERR: ", MIN_ERR
