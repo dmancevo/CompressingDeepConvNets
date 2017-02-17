@@ -7,7 +7,7 @@ MIN_ERR    = 0.046
 
 EPOCHS     = 50
 MINI_BATCH = 100
-FMP        = 1.414
+FMP        = 1.62
 DEPTH      = 8
 CHANNELS   = 30
 
@@ -30,7 +30,6 @@ def data_aug(images):
 
 	return images
 
-
 def batch_norm(layer, channels):
 	'''
 	Batch normalization.
@@ -47,8 +46,6 @@ def batch_norm(layer, channels):
 		variance_epsilon = 1e-3)
 
 	return current
-
-
 
 def conv(current, height, width, chan_in, chan_out, padding="SAME"):
 	'''
@@ -74,6 +71,30 @@ def leaky_relu(current):
 	a = tf.Variable(np.random.uniform(0.07,0.13), dtype=tf.float32)
 	return tf.maximum(current, a*current)
 
+def segment(layer, fltr):
+	'''
+	Upsample and classify each pixel in picture.
+
+	cx: output from convolutional layer at depth x
+	'''
+	batch_size = tf.shape(layer)[0]
+
+	W = tf.Variable(
+		np.random.normal(0,0.01,size=fltr),
+		dtype=tf.float32
+	)
+	current = tf.nn.conv2d_transpose(
+		value=layer,
+		filter=W,
+		output_shape=tf.pack((batch_size, IMAGE_HEIGHT, IMAGE_WIDTH, fltr[2])),
+		strides=(1,fltr[0],fltr[1],1),
+		padding="VALID"
+	) 
+
+	return current
+
+
+
 def graph():
 	'''
 	Build Graph.
@@ -93,7 +114,8 @@ def graph():
 
 	# Data Augmentation
 	augment = tf.placeholder(tf.bool, name="augment")
-	current = tf.cond(augment, lambda: data_aug(current), lambda: current)
+	# current = tf.cond(augment, lambda: data_aug(current), lambda: current)
+	current = images
 	
 	crop_height, crop_width = CROP_HEIGHT,CROP_WIDTH
 
@@ -113,11 +135,7 @@ def graph():
 		chan_in  = i*CHANNELS
 		crop_height, crop_width = int(crop_height/FMP), int(crop_width/FMP)
 
-		if i==3:
-			c3 = current
-		elif i==5:
-			c5 = current
-		elif i==8:
+		if i==8:
 			c8 = current
 
 	current = conv(c8, crop_height, crop_width, chan_in, chan_in, padding="VALID")
@@ -133,19 +151,21 @@ def graph():
 		logits, labels), name="loss")
 	train_step = tf.train.AdamOptimizer().minimize(loss, name="train_step")
 
-	return labels, images, is_crops, crops, keep_prob, augment, c3, c5, c8, logits, prob, train_step
+	seg = segment(c8, fltr=(60,64,8,240))
+	# seg=current
+
+	return labels, images, is_crops, crops, keep_prob, augment, \
+	c8, logits, prob, train_step, seg
 
 
 if __name__ == '__main__':
 
-	labels, images, is_crops, crops, keep_prob, augment, c3, c5, c8, \
-	logits, prob, train_step = graph()
-
-	print c3.get_shape()
-
-	print c5.get_shape()
+	labels, images, is_crops, crops, keep_prob, augment, c8, \
+	logits, prob, train_step, seg = graph()
 
 	print c8.get_shape()
+
+	print seg.get_shape()
 
 # 	with open("{0}/train.pkl".format(DATA_PATH), "rb") as f:
 # 		train_labels, train_crops = pkl.load(f)
