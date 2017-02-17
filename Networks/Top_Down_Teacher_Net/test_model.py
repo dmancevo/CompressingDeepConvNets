@@ -36,48 +36,28 @@ if __name__ == '__main__':
 		labels, images, keep_prob, augment, logits, prob, loss, train_step =\
 			layers
 
-		# for n in range(N_avg):
+		for n in range(N_avg):
 
-		# 	temp = np.empty(shape=(0,2))
-		# 	for J in np.array_split(range(N_test),  16):
+			temp = np.empty(shape=(0,2))
+			for J in np.array_split(range(N_test),  16):
 
-		# 		temp = np.concatenate((
-		# 			temp, sess.run(prob, feed_dict={
-		# 			labels: test_labels[J],
-		# 			images: test_crops[J],
-		# 			keep_prob: [1. for i in range(DEPTH)],
-		# 			augment: False,
-		# 		})))
+				temp = np.concatenate((
+					temp, sess.run(prob, feed_dict={
+					labels: test_labels[J],
+					images: test_crops[J],
+					keep_prob: [1. for i in range(DEPTH)],
+					augment: False,
+				})))
 
-		# 	if n == 0:
-		# 		y_hat = temp
-		# 	else:
-		# 		y_hat = (n*y_hat + temp)/(n+1.)
+			if n == 0:
+				y_hat = temp
+			else:
+				y_hat = (n*y_hat + temp)/(n+1.)
 
-		# 	print "No. Tests: ", n+1
-		# 	err = 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
-		# 	print "Err: ", err
-		# 	print "F1 Score: ", f1_score(test_labels,np.argmax(y_hat,axis=1))
-
-
-		with open("/notebooks/Data/top_down_view/top_down_view_test_0.pkl", "rb") as f:
-			test = pkl.load(f)
-
-		for j in test.keys():
-			sample_batch = test[j]
-			coords, img = sample_batch["labels"], sample_batch["data"]
-
-			for i in range(len(sample_batch["labels"])):
-
-				batch  = scan_batch(img[i])
-				counts = np.sum(
-					[1 if is_valid_crop(coord) else 0 for coord in coords[i]]
-					)
-
-				print batch.shape, counts
-
-				break
-			break
+			print "No. Tests: ", n+1
+			err = 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
+			print "Err: ", err
+			print "F1 Score: ", f1_score(test_labels,np.argmax(y_hat,axis=1))
 
 
 
