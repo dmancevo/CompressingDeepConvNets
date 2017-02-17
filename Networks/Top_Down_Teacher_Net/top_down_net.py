@@ -14,26 +14,9 @@ CHANNELS   = 30
 TOTAL_EPOCHS = 0
 SAVED_EPOCHS = TOTAL_EPOCHS
 
-DATA_PATH               = "/notebooks/Data/top_down_view"
-CROP_HEIGHT, CROP_WIDTH = 60, 80
-
-
-def batch_norm(layer, dims):
-	'''
-	Batch normalization.
-	'''
-	b_mean, b_var = tf.nn.moments(layer,[0])
-	scale         = tf.Variable(tf.ones(dims))
-	beta          = tf.Variable(tf.zeros(dims))
-	current       = tf.nn.batch_normalization(
-		x                = layer,
-		mean             = b_mean,
-		variance         = b_var,
-		offset           = beta,
-		scale            = scale,
-		variance_epsilon = 1e-3)
-
-	return current
+DATA_PATH                 = "/notebooks/Data/top_down_view"
+IMAGE_HEIGHT, IMAGE_WIDTH = 240, 320
+CROP_HEIGHT, CROP_WIDTH   = 60, 80
 
 def data_aug(images):
 	images = tf.map_fn(
@@ -46,6 +29,26 @@ def data_aug(images):
 		lambda img: tf.image.random_contrast(img, lower=0.2, upper=1.8), images)
 
 	return images
+
+
+def batch_norm(layer, channels):
+	'''
+	Batch normalization.
+	'''
+	b_mean, b_var = tf.nn.moments(layer,[0,1,2])
+	scale         = tf.Variable(tf.ones(channels))
+	beta          = tf.Variable(tf.zeros(channels))
+	current       = tf.nn.batch_normalization(
+		x                = layer,
+		mean             = b_mean,
+		variance         = b_var,
+		offset           = beta,
+		scale            = scale,
+		variance_epsilon = 1e-3)
+
+	return current
+
+
 
 def conv(current, height, width, chan_in, chan_out, padding="SAME"):
 	'''
@@ -77,20 +80,27 @@ def graph():
 	'''
 
 	# Load the data...
-	labels       = tf.placeholder(dtype=tf.int32, shape=(None,), name="labels")
-	images       = tf.placeholder(dtype=tf.float32,
-		shape=(None,CROP_HEIGHT,CROP_WIDTH,3), name="images")
-	keep_prob    = tf.placeholder(dtype=tf.float32, shape=(DEPTH,))
+	labels    = tf.placeholder(dtype=tf.int32, shape=(None,), name="labels")
+	is_crops  = tf.placeholder(dtype=tf.bool)
+	images    = tf.placeholder(dtype=tf.float32,
+		shape=(None, IMAGE_HEIGHT, IMAGE_WIDTH, 3))
+	crops     = tf.placeholder(dtype=tf.float32,
+		shape=(None,CROP_HEIGHT,CROP_WIDTH,3), name="crops")
+	keep_prob = tf.placeholder(dtype=tf.float32, shape=(DEPTH,))
+
+	# Process crop or image
+	current = tf.cond(is_crops, lambda: crops, lambda: images)
 
 	# Data Augmentation
 	augment = tf.placeholder(tf.bool, name="augment")
-	current = tf.cond(augment, lambda: data_aug(images), lambda: images)
+	current = tf.cond(augment, lambda: data_aug(current), lambda: current)
 	
-	height, width = CROP_HEIGHT,CROP_WIDTH
+	crop_height, crop_width = CROP_HEIGHT,CROP_WIDTH
+
 	chan_in, chan_out = 3, CHANNELS
+	current  = batch_norm(current, chan_in)
 	for i in range(1,DEPTH+1):
 		chan_out = i*CHANNELS
-		current  = batch_norm(current, (height,width,chan_in))
 		current  = conv(current, 2, 2, chan_in, chan_out)
 		current  = leaky_relu(current)
 		curent   = tf.nn.dropout(current, keep_prob[i-1])
@@ -99,11 +109,18 @@ def graph():
 			pooling_ratio=(1.0, FMP, FMP, 1.0),
 			pseudo_random=True,
 			)[0]
-		chan_in       = i*CHANNELS
-		height, width = int(height/FMP), int(width/FMP)
+		current  = batch_norm(current, chan_out)
+		chan_in  = i*CHANNELS
+		crop_height, crop_width = int(crop_height/FMP), int(crop_width/FMP)
 
-	current = batch_norm(current, (height,width,chan_in))
-	current = conv(current, height, width, chan_in, chan_in, padding="VALID")
+		if i==3:
+			c3 = current
+		elif i==5:
+			c5 = current
+		elif i==8:
+			c8 = current
+
+	current = conv(c8, crop_height, crop_width, chan_in, chan_in, padding="VALID")
 	current = leaky_relu(current)
 	current = tf.nn.dropout(current, keep_prob[-1])
 
@@ -116,80 +133,89 @@ def graph():
 		logits, labels), name="loss")
 	train_step = tf.train.AdamOptimizer().minimize(loss, name="train_step")
 
-	return labels, images, keep_prob, augment, logits, prob, loss, train_step
+	return labels, images, is_crops, crops, keep_prob, augment, c3, c5, c8, logits, prob, train_step
 
 
 if __name__ == '__main__':
 
-	with open("{0}/train.pkl".format(DATA_PATH), "rb") as f:
-		train_labels, train_crops = pkl.load(f)
+	labels, images, is_crops, crops, keep_prob, augment, c3, c5, c8, \
+	logits, prob, train_step = graph()
 
-	with open("{0}/test.pkl".format(DATA_PATH), "rb") as f:
-		test_labels, test_crops = pkl.load(f)
+	print c3.get_shape()
+
+	print c5.get_shape()
+
+	print c8.get_shape()
+
+# 	with open("{0}/train.pkl".format(DATA_PATH), "rb") as f:
+# 		train_labels, train_crops = pkl.load(f)
+
+# 	with open("{0}/test.pkl".format(DATA_PATH), "rb") as f:
+# 		test_labels, test_crops = pkl.load(f)
 
 
-	train_labels, train_crops = train_labels[:16300], train_crops[:16300]
-	test_labels, test_crops = test_labels[:4800], test_crops[:4800]
+# 	train_labels, train_crops = train_labels[:16300], train_crops[:16300]
+# 	test_labels, test_crops = test_labels[:4800], test_crops[:4800]
 
-	N_train, N_test = len(train_labels), len(test_labels)
+# 	N_train, N_test = len(train_labels), len(test_labels)
 
-	with tf.Session() as sess:
+# 	with tf.Session() as sess:
 
-		try:
-			saver = tf.train.import_meta_graph("saved/top_down_net.meta")
-			saver.restore(sess, tf.train.latest_checkpoint("saved/"))
-			layers = tf.get_collection('layers')
+# 		try:
+# 			saver = tf.train.import_meta_graph("saved/top_down_net.meta")
+# 			saver.restore(sess, tf.train.latest_checkpoint("saved/"))
+# 			layers = tf.get_collection('layers')
 
-			print "Successfully loaded graph from file."
+# 			print "Successfully loaded graph from file."
 
-		except IOError:
+# 		except IOError:
 
-			print "Building graph from scratch..."
+# 			print "Building graph from scratch..."
 
-			layers = graph()
-			for layer in layers:
-				tf.add_to_collection('layers', layer)
+# 			layers = graph()
+# 			for layer in layers:
+# 				tf.add_to_collection('layers', layer)
 
-			init_op    = tf.global_variables_initializer()
-			sess.run(init_op)
+# 			init_op    = tf.global_variables_initializer()
+# 			sess.run(init_op)
 
-		labels, images, keep_prob, augment, logits, prob, loss, train_step =\
-			layers
+# 		labels, crops, keep_prob, augment, logits, prob, train_step =\
+# 			layers
 
-		print "Training..."
-		for epoch in range(EPOCHS):
-			for __ in range(N_train/MINI_BATCH):
+# 		print "Training..."
+# 		for epoch in range(EPOCHS):
+# 			for __ in range(N_train/MINI_BATCH):
 
-				I = np.random.choice(range(N_train), size=100, replace=False)
-				sess.run(train_step, feed_dict={
-					labels: train_labels[I],
-					images: train_crops[I],
-					keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
-					augment: True,
-				})
+# 				I = np.random.choice(range(N_train), size=100, replace=False)
+# 				sess.run(train_step, feed_dict={
+# 					labels: train_labels[I],
+# 					crops: train_crops[I],
+# 					keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
+# 					augment: True,
+# 				})
 
-			y_hat = np.empty(shape=(0,2))
-			for J in np.array_split(range(N_test),  16):
-				y_hat = np.concatenate((
-					y_hat, sess.run(prob, feed_dict={
-					labels: test_labels[J],
-					images: test_crops[J],
-					keep_prob: [1. for i in range(DEPTH)],
-					augment: False,
-				})))
+# 			y_hat = np.empty(shape=(0,2))
+# 			for J in np.array_split(range(N_test),  16):
+# 				y_hat = np.concatenate((
+# 					y_hat, sess.run(prob, feed_dict={
+# 					labels: test_labels[J],
+# 					crops: test_crops[J],
+# 					keep_prob: [1. for i in range(DEPTH)],
+# 					augment: False,
+# 				})))
 
-			print "Epoch: ", TOTAL_EPOCHS+epoch+1
-			err = 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
-			print "Err: ", err
-			print "F1 Score: ", f1_score(test_labels,np.argmax(y_hat,axis=1))
+# 			print "Epoch: ", TOTAL_EPOCHS+epoch+1
+# 			err = 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
+# 			print "Err: ", err
+# 			print "F1 Score: ", f1_score(test_labels,np.argmax(y_hat,axis=1))
 
-			if err < MIN_ERR:
-				print "Saving..."
-				MIN_ERR = err
-				SAVED_EPOCHS = TOTAL_EPOCHS+epoch+1
-				new_saver = tf.train.Saver(max_to_keep=2)
-				new_saver.save(sess, "saved/top_down_net")
+# 			if err < MIN_ERR:
+# 				print "Saving..."
+# 				MIN_ERR = err
+# 				SAVED_EPOCHS = TOTAL_EPOCHS+epoch+1
+# 				new_saver = tf.train.Saver(max_to_keep=2)
+# 				new_saver.save(sess, "saved/top_down_net")
 
-print "SAVED EPOCHS: ", SAVED_EPOCHS
-print "MIN ERR: ", MIN_ERR
-print "Done!"
+# print "SAVED EPOCHS: ", SAVED_EPOCHS
+# print "MIN ERR: ", MIN_ERR
+# print "Done!"

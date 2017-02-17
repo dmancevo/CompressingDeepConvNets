@@ -21,7 +21,7 @@ if __name__ == '__main__':
 		saver.restore(sess, tf.train.latest_checkpoint("saved/"))
 		layers = tf.get_collection('layers')
 
-		labels, images, keep_prob, augment, logits, prob, loss, train_step =\
+		labels, images, keep_prob, augment, logits, prob, train_step =\
 			layers
 
 		for n in range(N_avg):
