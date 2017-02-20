@@ -25,6 +25,7 @@ if __name__ == '__main__':
 	with open("train.pkl", "rb") as f:
 		labels, crops = pkl.load(f)
 
+	I = np.random.choice(range(len(labels)), size=N, replace=False)
 
 	# plot(imgs, labels)
-	plot(crops[:N], labels[:N])
+	plot(crops[I], labels[I])
