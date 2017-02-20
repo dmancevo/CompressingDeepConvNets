@@ -114,17 +114,15 @@ def graph_crop_class(labels, keep_prob, c8):
 	current = leaky_relu(current)
 	current = tf.nn.dropout(current, keep_prob[-1])
 
-	current = batch_norm(current, 240)
+	# current = batch_norm(current, 240)
 	current = conv(current, 1, 1, 240, 2)
 
 	crop_log   = current[:,0,0,:]
 	crop_prob  = tf.nn.softmax(crop_log, name="crop_prob")
 	loss       = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
 		crop_log, labels), name="loss")
-	train_step = tf.train.AdamOptimizer().minimize(loss, name="train_step")
 
-	return  crop_log, crop_prob, train_step
-
+	return crop_log, crop_prob, loss
 
 def graph_pxl_class(pxl_labels, keep_prob, c8):
 	'''
@@ -148,9 +146,9 @@ def graph_pxl_class(pxl_labels, keep_prob, c8):
 
 	current = leaky_relu(current)
 	current = tf.nn.dropout(current, keep_prob[-1])
-	current = batch_norm(current, PXL_CHAN)
+	# current = batch_norm(current, PXL_CHAN)
 	current = conv(current, 1, 1, PXL_CHAN, 2, padding="VALID")
-	current = batch_norm(current, 2)
+	# current = batch_norm(current, 2)
 
 	pxl_log      = current
 	pxl_prob     = tf.nn.softmax(pxl_log, name="pxl_prob")
@@ -158,9 +156,8 @@ def graph_pxl_class(pxl_labels, keep_prob, c8):
 	f_pxl_labels = tf.reshape(pxl_labels, shape=(-1,))
 	pxl_loss     = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
 		f_pxl_log, f_pxl_labels), name="pxl_loss")
-	train_step   = tf.train.AdamOptimizer().minimize(pxl_loss, name="train_step")
 
-	return pxl_log, pxl_prob, train_step
+	return pxl_log, pxl_prob, pxl_loss
 
 def graph():
 	'''
@@ -173,12 +170,14 @@ def graph():
 	is_crops = tf.placeholder(dtype=tf.bool, name="is_crops")
 
 	# Process crop or image
-	logits, prob, train_step = graph_pxl_class(pxl_labels, keep_prob, c8)
-	# =tf.cond(
-	# 	is_crops,
-	# 	lambda: graph_crop_class(labels, keep_prob, c8),
-	# 	lambda: graph_pxl_class(pxl_labels, keep_prob, c7, c8)
-	# )
+	logits, prob, loss=\
+	tf.cond(
+		is_crops,
+		lambda: graph_crop_class(labels, keep_prob, c8),
+		lambda: graph_pxl_class(pxl_labels, keep_prob, c8)
+	)
+
+	train_step = tf.train.AdamOptimizer().minimize(loss, name="train_step")
 
 	return labels, pxl_labels, images, keep_prob, augment, c8,\
 	is_crops, logits, prob, train_step
@@ -205,6 +204,9 @@ if __name__ == '__main__':
 
 	with tf.Session() as sess:
 
+		# labels, pxl_labels, images, keep_prob, augment, c8,\
+		# is_crops, logits, prob, train_step = graph()
+
 		labels, pxl_labels, images, keep_prob, augment, c8,\
 		is_crops, logits, prob, train_step = graph()
 
@@ -212,13 +214,15 @@ if __name__ == '__main__':
 		sess.run(init_op)
 
 		print sess.run(prob, feed_dict={
-			# labels: labs,
+			labels: labs,
 			pxl_labels: pxl_labs,
 			images: imgs,
 			keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
 			augment: True,
-			# is_crops: True,
+			is_crops: False,
 		}).shape
+
+
 
 
 		# try:
