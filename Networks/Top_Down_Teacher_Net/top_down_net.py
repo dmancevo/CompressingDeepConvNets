@@ -10,6 +10,7 @@ MINI_BATCH = 100
 FMP        = 1.62
 DEPTH      = 8
 CHANNELS   = 30
+PXL_CHAN   = (4,8)
 
 TOTAL_EPOCHS = 0
 SAVED_EPOCHS = TOTAL_EPOCHS
@@ -71,38 +72,22 @@ def leaky_relu(current):
 	a = tf.Variable(np.random.uniform(0.07,0.13), dtype=tf.float32)
 	return tf.maximum(current, a*current)
 
-def segment(layers):
+def graph_conv():
 	'''
-	Upsample and classify each pixel in picture.
-
-	cx: output from convolutional layer at depth x
-	'''
-
-def graph():
-	'''
-	Build Graph.
+	Build convolution-fractional max pooling portion of graph.
 	'''
 
 	# Load the data...
 	labels      = tf.placeholder(dtype=tf.int32, shape=(None,), name="labels")
 	pxl_labels  = tf.placeholder(dtype=tf.int32,
 		   shape=(None, IMAGE_HEIGHT,IMAGE_WIDTH))
-	is_crops    = tf.placeholder(dtype=tf.bool)
 	images      = tf.placeholder(dtype=tf.float32,
-		   shape=(None, IMAGE_HEIGHT, IMAGE_WIDTH, 3))
-	crops       = tf.placeholder(dtype=tf.float32,
-		   shape=(None,CROP_HEIGHT,CROP_WIDTH,3), name="crops")
+		   shape=(None, None, None, 3))
 	keep_prob   = tf.placeholder(dtype=tf.float32, shape=(DEPTH,))
-
-	# Process crop or image
-	current = tf.cond(is_crops, lambda: crops, lambda: images)
 
 	# Data Augmentation
 	augment = tf.placeholder(tf.bool, name="augment")
-	# current = tf.cond(augment, lambda: data_aug(current), lambda: current)
-	current = images
-	
-	crop_height, crop_width = CROP_HEIGHT,CROP_WIDTH
+	current = tf.cond(augment, lambda: data_aug(images), lambda: images)
 
 	chan_in, chan_out = 3, CHANNELS
 	current  = batch_norm(current, chan_in)
@@ -118,17 +103,15 @@ def graph():
 			)[0]
 		current  = batch_norm(current, chan_out)
 		chan_in  = i*CHANNELS
-		crop_height, crop_width = int(crop_height/FMP), int(crop_width/FMP)
 
-		if i==04:
+		if i==4:
 			c4 = current
 		if i==8:
 			c8 = current
 
-	return labels, pxl_labels, images, is_crops, crops, keep_prob, augment, c4, c8
+	return labels, pxl_labels, images, keep_prob, augment, c4, c8
 
-
-def graph_class(labels, keep_prob, c8):
+def graph_crop_class(labels, keep_prob, c8):
 	'''
 	Crop classification portion of the graph.
 	'''
@@ -136,31 +119,31 @@ def graph_class(labels, keep_prob, c8):
 	current = leaky_relu(current)
 	current = tf.nn.dropout(current, keep_prob[-1])
 
-	current = batch_norm(current, (1,1,240))
+	current = batch_norm(current, 240)
 	current = conv(current, 1, 1, 240, 2)
 
-	logits     = current[:,0,0,:]
-	prob       = tf.nn.softmax(logits, name="prob")
+	crop_log   = current[:,0,0,:]
+	crop_prob       = tf.nn.softmax(crop_log, name="crop_prob")
 	loss       = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-		logits, labels), name="loss")
+		crop_log, labels), name="loss")
 	train_step = tf.train.AdamOptimizer().minimize(loss, name="train_step")
 
-	return  logits, prob, train_step
+	return  crop_log, crop_prob, train_step
 
 
-def graph_loc(pxl_labels, keep_prob, c4, c8):
+def graph_pxl_class(pxl_labels, keep_prob, c4, c8):
 	'''
 	Segmentation portion of the graph.
 	'''
 	layers = ([
-		(c4, (7, 7, 4, 120)),
-		(c8, (60,64,8,240))
+		(c4, (7, 7, PXL_CHAN[0], 120)),
+		(c8, (60,64,PXL_CHAN[1],240))
 	])
 
 	values = []
 	for layer, fltr in layers:
-		batch_size = tf.shape(layer)[0]
 
+		batch_size = tf.shape(layer)[0]
 		W = tf.Variable(
 			np.random.normal(0,0.01,size=fltr),
 			dtype=tf.float32
@@ -175,103 +158,117 @@ def graph_loc(pxl_labels, keep_prob, c4, c8):
 
 		values.append(current)
 
-	current    = tf.concat(3, values)
-	current    = batch_norm(current, 12)
-	W          = tf.Variable(
-		            np.random.normal(0,0.01,
-		            size=(IMAGE_HEIGHT,IMAGE_WIDTH,12,2)),
-		            dtype=tf.float32
-		         )
-	seg_log      = tf.nn.conv2d(current, W, strides=(1,1,1,1), padding="VALID")
-	seg          = tf.nn.softmax(seg_log, name="seg")
+	current = tf.concat(3, values)
+	current = leaky_relu(current)
+	current = tf.nn.dropout(current, keep_prob[-1])
+	current = batch_norm(current, 12)
+	current = conv(current, 1, 1, np.sum(PXL_CHAN), 2, padding="VALID")
+	current = batch_norm(current, 2)
 
-	f_seg_log    = tf.reshape(seg_log, shape=(-1,2))
+	pxl_log      = current
+	pxl_prob     = tf.nn.softmax(pxl_log, name="pxl_prob")
+	f_pxl_log    = tf.reshape(pxl_log, shape=(-1,2))
 	f_pxl_labels = tf.reshape(pxl_labels, shape=(-1,))
-	pxl_loss2    = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-		f_seg_log, f_pxl_labels), name="pxl_loss")
-	# train_step2 = tf.train.AdamOptimizer().minimize(loss, name="train_step")
+	pxl_loss     = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
+		f_pxl_log, f_pxl_labels), name="pxl_loss")
+	train_step   = tf.train.AdamOptimizer().minimize(pxl_loss, name="train_step")
 
-	return seg_log, seg
+	return pxl_log, pxl_prob, train_step
+
+def graph():
+	'''
+	Assemble the graph.
+	'''
+
+	labels, pxl_labels, images, keep_prob, augment, c4, c8\
+	= graph_conv()
+
+	is_crops = tf.placeholder(dtype=tf.bool)
+
+	# Process crop or image
+	logits, prob, train_step \
+	= tf.cond(
+		is_crops,
+		lambda: graph_crop_class(labels, keep_prob, c8),
+		lambda: graph_pxl_class(pxl_labels, keep_prob, c4, c8)
+	)
+
+	return labels, pxl_labels, images, keep_prob, augment, c4, c8,\
+	is_crops, logits, prob, train_step
+
 
 
 if __name__ == '__main__':
 
-	labels, sprs_labels, images, is_crops, crops, keep_prob, augment, c4, c8\
-	 = graph()
+	with open("{0}/train.pkl".format(DATA_PATH), "rb") as f:
+		train_labels, train_crops = pkl.load(f)
 
-	logits, prob, train_step = graph_class(labels, keep_prob, c8)
-
-	seg_log, seg = graph_loc(sprs_labels, keep_prob, c4, c8)
-
-# 	with open("{0}/train.pkl".format(DATA_PATH), "rb") as f:
-# 		train_labels, train_crops = pkl.load(f)
-
-# 	with open("{0}/test.pkl".format(DATA_PATH), "rb") as f:
-# 		test_labels, test_crops = pkl.load(f)
+	with open("{0}/test.pkl".format(DATA_PATH), "rb") as f:
+		test_labels, test_crops = pkl.load(f)
 
 
-# 	train_labels, train_crops = train_labels[:16300], train_crops[:16300]
-# 	test_labels, test_crops = test_labels[:4800], test_crops[:4800]
+	train_labels, train_crops = train_labels[:16300], train_crops[:16300]
+	test_labels, test_crops = test_labels[:4800], test_crops[:4800]
 
-# 	N_train, N_test = len(train_labels), len(test_labels)
+	N_train, N_test = len(train_labels), len(test_labels)
 
-# 	with tf.Session() as sess:
+	with tf.Session() as sess:
 
-# 		try:
-# 			saver = tf.train.import_meta_graph("saved/top_down_net.meta")
-# 			saver.restore(sess, tf.train.latest_checkpoint("saved/"))
-# 			layers = tf.get_collection('layers')
+		try:
+			saver = tf.train.import_meta_graph("saved/top_down_net.meta")
+			saver.restore(sess, tf.train.latest_checkpoint("saved/"))
+			layers = tf.get_collection('layers')
 
-# 			print "Successfully loaded graph from file."
+			print "Successfully loaded graph from file."
 
-# 		except IOError:
+		except IOError:
 
-# 			print "Building graph from scratch..."
+			print "Building graph from scratch..."
 
-# 			layers = graph()
-# 			for layer in layers:
-# 				tf.add_to_collection('layers', layer)
+			layers = graph()
+			for layer in layers:
+				tf.add_to_collection('layers', layer)
 
-# 			init_op    = tf.global_variables_initializer()
-# 			sess.run(init_op)
+			init_op    = tf.global_variables_initializer()
+			sess.run(init_op)
 
-# 		labels, crops, keep_prob, augment, logits, prob, train_step =\
-# 			layers
+		labels, pxl_labels, images, keep_prob, augment, c4, c8,\
+		is_crops, logits, prob, train_step = layers
 
-# 		print "Training..."
-# 		for epoch in range(EPOCHS):
-# 			for __ in range(N_train/MINI_BATCH):
+		print "Crop Class Training..."
+		for epoch in range(EPOCHS):
+			for __ in range(N_train/MINI_BATCH):
 
-# 				I = np.random.choice(range(N_train), size=100, replace=False)
-# 				sess.run(train_step, feed_dict={
-# 					labels: train_labels[I],
-# 					crops: train_crops[I],
-# 					keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
-# 					augment: True,
-# 				})
+				I = np.random.choice(range(N_train), size=100, replace=False)
+				sess.run(train_step, feed_dict={
+					labels: train_labels[I],
+					crops: train_crops[I],
+					keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
+					augment: True,
+				})
 
-# 			y_hat = np.empty(shape=(0,2))
-# 			for J in np.array_split(range(N_test),  16):
-# 				y_hat = np.concatenate((
-# 					y_hat, sess.run(prob, feed_dict={
-# 					labels: test_labels[J],
-# 					crops: test_crops[J],
-# 					keep_prob: [1. for i in range(DEPTH)],
-# 					augment: False,
-# 				})))
+			y_hat = np.empty(shape=(0,2))
+			for J in np.array_split(range(N_test),  16):
+				y_hat = np.concatenate((
+					y_hat, sess.run(prob, feed_dict={
+					labels: test_labels[J],
+					crops: test_crops[J],
+					keep_prob: [1. for i in range(DEPTH)],
+					augment: False,
+				})))
 
-# 			print "Epoch: ", TOTAL_EPOCHS+epoch+1
-# 			err = 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
-# 			print "Err: ", err
-# 			print "F1 Score: ", f1_score(test_labels,np.argmax(y_hat,axis=1))
+			print "Epoch: ", TOTAL_EPOCHS+epoch+1
+			err = 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
+			print "Err: ", err
+			print "F1 Score: ", f1_score(test_labels,np.argmax(y_hat,axis=1))
 
-# 			if err < MIN_ERR:
-# 				print "Saving..."
-# 				MIN_ERR = err
-# 				SAVED_EPOCHS = TOTAL_EPOCHS+epoch+1
-# 				new_saver = tf.train.Saver(max_to_keep=2)
-# 				new_saver.save(sess, "saved/top_down_net")
+			if err < MIN_ERR:
+				print "Saving..."
+				MIN_ERR = err
+				SAVED_EPOCHS = TOTAL_EPOCHS+epoch+1
+				new_saver = tf.train.Saver(max_to_keep=2)
+				new_saver.save(sess, "saved/top_down_net")
 
-# print "SAVED EPOCHS: ", SAVED_EPOCHS
-# print "MIN ERR: ", MIN_ERR
-# print "Done!"
+		print "SAVED EPOCHS: ", SAVED_EPOCHS
+		print "MIN ERR: ", MIN_ERR
+		print "Crop Class Training Done!"
