@@ -71,29 +71,12 @@ def leaky_relu(current):
 	a = tf.Variable(np.random.uniform(0.07,0.13), dtype=tf.float32)
 	return tf.maximum(current, a*current)
 
-def segment(layer, fltr):
+def segment(layers):
 	'''
 	Upsample and classify each pixel in picture.
 
 	cx: output from convolutional layer at depth x
 	'''
-	batch_size = tf.shape(layer)[0]
-
-	W = tf.Variable(
-		np.random.normal(0,0.01,size=fltr),
-		dtype=tf.float32
-	)
-	current = tf.nn.conv2d_transpose(
-		value=layer,
-		filter=W,
-		output_shape=tf.pack((batch_size, IMAGE_HEIGHT, IMAGE_WIDTH, fltr[2])),
-		strides=(1,fltr[0],fltr[1],1),
-		padding="VALID"
-	) 
-
-	return current
-
-
 
 def graph():
 	'''
@@ -101,13 +84,15 @@ def graph():
 	'''
 
 	# Load the data...
-	labels    = tf.placeholder(dtype=tf.int32, shape=(None,), name="labels")
-	is_crops  = tf.placeholder(dtype=tf.bool)
-	images    = tf.placeholder(dtype=tf.float32,
-		shape=(None, IMAGE_HEIGHT, IMAGE_WIDTH, 3))
-	crops     = tf.placeholder(dtype=tf.float32,
-		shape=(None,CROP_HEIGHT,CROP_WIDTH,3), name="crops")
-	keep_prob = tf.placeholder(dtype=tf.float32, shape=(DEPTH,))
+	labels      = tf.placeholder(dtype=tf.int32, shape=(None,), name="labels")
+	pxl_labels  = tf.placeholder(dtype=tf.int32,
+		   shape=(None, IMAGE_HEIGHT,IMAGE_WIDTH))
+	is_crops    = tf.placeholder(dtype=tf.bool)
+	images      = tf.placeholder(dtype=tf.float32,
+		   shape=(None, IMAGE_HEIGHT, IMAGE_WIDTH, 3))
+	crops       = tf.placeholder(dtype=tf.float32,
+		   shape=(None,CROP_HEIGHT,CROP_WIDTH,3), name="crops")
+	keep_prob   = tf.placeholder(dtype=tf.float32, shape=(DEPTH,))
 
 	# Process crop or image
 	current = tf.cond(is_crops, lambda: crops, lambda: images)
@@ -135,15 +120,24 @@ def graph():
 		chan_in  = i*CHANNELS
 		crop_height, crop_width = int(crop_height/FMP), int(crop_width/FMP)
 
+		if i==04:
+			c4 = current
 		if i==8:
 			c8 = current
 
-	current = conv(c8, crop_height, crop_width, chan_in, chan_in, padding="VALID")
+	return labels, pxl_labels, images, is_crops, crops, keep_prob, augment, c4, c8
+
+
+def graph_class(labels, keep_prob, c8):
+	'''
+	Crop classification portion of the graph.
+	'''
+	current = conv(c8, 4, 5, 240, 240, padding="VALID")
 	current = leaky_relu(current)
 	current = tf.nn.dropout(current, keep_prob[-1])
 
-	current = batch_norm(current, (1,1,chan_in))
-	current = conv(current, 1, 1, chan_in, 2)
+	current = batch_norm(current, (1,1,240))
+	current = conv(current, 1, 1, 240, 2)
 
 	logits     = current[:,0,0,:]
 	prob       = tf.nn.softmax(logits, name="prob")
@@ -151,21 +145,63 @@ def graph():
 		logits, labels), name="loss")
 	train_step = tf.train.AdamOptimizer().minimize(loss, name="train_step")
 
-	seg = segment(c8, fltr=(60,64,8,240))
-	# seg=current
+	return  logits, prob, train_step
 
-	return labels, images, is_crops, crops, keep_prob, augment, \
-	c8, logits, prob, train_step, seg
+
+def graph_loc(pxl_labels, keep_prob, c4, c8):
+	'''
+	Segmentation portion of the graph.
+	'''
+	layers = ([
+		(c4, (7, 7, 4, 120)),
+		(c8, (60,64,8,240))
+	])
+
+	values = []
+	for layer, fltr in layers:
+		batch_size = tf.shape(layer)[0]
+
+		W = tf.Variable(
+			np.random.normal(0,0.01,size=fltr),
+			dtype=tf.float32
+		)
+		current = tf.nn.conv2d_transpose(
+			value=layer,
+			filter=W,
+			output_shape=tf.pack((batch_size, IMAGE_HEIGHT, IMAGE_WIDTH, fltr[2])),
+			strides=(1,fltr[0],fltr[1],1),
+			padding="VALID"
+		) 
+
+		values.append(current)
+
+	current    = tf.concat(3, values)
+	current    = batch_norm(current, 12)
+	W          = tf.Variable(
+		            np.random.normal(0,0.01,
+		            size=(IMAGE_HEIGHT,IMAGE_WIDTH,12,2)),
+		            dtype=tf.float32
+		         )
+	seg_log      = tf.nn.conv2d(current, W, strides=(1,1,1,1), padding="VALID")
+	seg          = tf.nn.softmax(seg_log, name="seg")
+
+	f_seg_log    = tf.reshape(seg_log, shape=(-1,2))
+	f_pxl_labels = tf.reshape(pxl_labels, shape=(-1,))
+	pxl_loss2    = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
+		f_seg_log, f_pxl_labels), name="pxl_loss")
+	# train_step2 = tf.train.AdamOptimizer().minimize(loss, name="train_step")
+
+	return seg_log, seg
 
 
 if __name__ == '__main__':
 
-	labels, images, is_crops, crops, keep_prob, augment, c8, \
-	logits, prob, train_step, seg = graph()
+	labels, sprs_labels, images, is_crops, crops, keep_prob, augment, c4, c8\
+	 = graph()
 
-	print c8.get_shape()
+	logits, prob, train_step = graph_class(labels, keep_prob, c8)
 
-	print seg.get_shape()
+	seg_log, seg = graph_loc(sprs_labels, keep_prob, c4, c8)
 
 # 	with open("{0}/train.pkl".format(DATA_PATH), "rb") as f:
 # 		train_labels, train_crops = pkl.load(f)
