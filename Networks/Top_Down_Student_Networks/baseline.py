@@ -106,7 +106,7 @@ def graph():
 	logits  = current[:,0,0,:]
 	prob    = tf.nn.softmax(logits, name="prob")
 	loss    = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-		logits, labels), name="loss")
+		logits=logits, labels=labels), name="loss")
 	train_step = tf.train.AdamOptimizer().minimize(loss, name="train_step")
 
 	return labels, images, keep_prob, augment, prob, loss, train_step

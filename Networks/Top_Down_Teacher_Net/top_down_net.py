@@ -120,7 +120,7 @@ def graph_crop_class(labels, keep_prob, c8):
 	crop_log   = current[:,0,0,:]
 	crop_prob  = tf.nn.softmax(crop_log, name="crop_prob")
 	loss       = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-		crop_log, labels), name="loss")
+		logits=crop_log, labels=labels), name="loss")
 
 	return crop_log, crop_prob, loss
 
@@ -139,7 +139,7 @@ def graph_pxl_class(pxl_labels, keep_prob, c8):
 	current = tf.nn.conv2d_transpose(
 		value=c8,
 		filter=W,
-		output_shape=tf.pack((batch_size, IMAGE_HEIGHT, IMAGE_WIDTH, fltr[2])),
+		output_shape=tf.stack((batch_size, IMAGE_HEIGHT, IMAGE_WIDTH, fltr[2])),
 		strides=(1,fltr[0],fltr[1],1),
 		padding="VALID"
 	) 
@@ -155,7 +155,7 @@ def graph_pxl_class(pxl_labels, keep_prob, c8):
 	f_pxl_log    = tf.reshape(pxl_log, shape=(-1,2))
 	f_pxl_labels = tf.reshape(pxl_labels, shape=(-1,))
 	pxl_loss     = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-		f_pxl_log, f_pxl_labels), name="pxl_loss")
+		logits=f_pxl_log, labels=f_pxl_labels), name="pxl_loss")
 
 	return pxl_log, pxl_prob, pxl_loss
 

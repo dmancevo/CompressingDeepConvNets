@@ -5,6 +5,7 @@ from sklearn.metrics import accuracy_score, f1_score
 
 
 N_avg = 12
+DATA_PATH                 = "/notebooks/Data/top_down_view"
 
 if __name__ == '__main__':
 

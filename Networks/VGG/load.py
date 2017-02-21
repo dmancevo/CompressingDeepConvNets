@@ -11,7 +11,7 @@ def load(L, current, layer):
 
 	mean_pixel = np.array([123.680, 116.779, 103.939], dtype=np.float32)
 
-	current = tf.sub(current, tf.constant(mean_pixel, dtype=tf.float32))
+	current = tf.subtract(current, tf.constant(mean_pixel, dtype=tf.float32))
 
 	for i in range(mat["layers"][0].shape[0]):
 
