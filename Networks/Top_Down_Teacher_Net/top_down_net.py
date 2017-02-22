@@ -57,19 +57,16 @@ def leaky_relu(current):
 	a = tf.Variable(np.random.uniform(0.07,0.13), dtype=tf.float32)
 	return tf.maximum(current, a*current)
 
-def batch_norm(current):
+def batch_norm(current, training):
 	'''
-	Batch Norm (notice that this function has not learning parameters).
-	I.e. it performs batch normalization based on the batch statistics only.
+	Batch Normalization wrapper.
 	'''
-	b_mean, b_var = tf.nn.moments(layer,[0])
-	current       = tf.nn.batch_normalization(
-		x                = layer,
-		mean             = b_mean,
-		variance         = b_var,
-		offset           = None,
-		scale            = None,
-		variance_epsilon = 1e-3)
+	current = tf.layers.batch_normalization(
+			current,
+			axis=-1,
+			training=training,
+			momentum=0.9,
+		)
 
 	return current
 
@@ -97,12 +94,7 @@ def graph_conv(training, images, augment, keep_prob):
 			pooling_ratio=(1.0, FMP, FMP, 1.0),
 			pseudo_random=True,
 			)[0]
-		current = tf.layers.batch_normalization(
-			current,
-			axis=-1,
-			training=training,
-			momentum=0.7,
-		)
+		current = batch_norm(current, training)
 		chan_in  = i*CHANNELS
 
 	return current
@@ -114,12 +106,7 @@ def graph_crop_class(training, labels, keep_prob, c8):
 	current = conv(c8, 2, 4, MAX_CHAN, MAX_CHAN, padding="VALID")
 	current = leaky_relu(current)
 	current = tf.nn.dropout(current, keep_prob[-1])
-	current = tf.layers.batch_normalization(
-		current,
-		axis=-1,
-		training=training,
-		momentum=0.7,
-	)
+	current = batch_norm(current, training)
 	current = conv(current, 1, 1, MAX_CHAN, 2)
 
 	crop_log   = current[:,0,0,:]
@@ -152,12 +139,7 @@ def graph_pxl_class(training, pxl_labels, keep_prob, c8):
 	current = leaky_relu(current)
 	current = tf.nn.dropout(current, keep_prob[-1])
 	current.set_shape((None,IMAGE_HEIGHT,IMAGE_WIDTH,PXL_CHAN))
-	current = tf.layers.batch_normalization(
-		current,
-		axis=-1,
-		training=training,
-		momentum=0.7,
-	)
+	current = batch_norm(current, training)
 	current = conv(current, 1, 1, PXL_CHAN, 2, padding="VALID")
 
 	pxl_log      = current
@@ -279,7 +261,7 @@ if __name__ == '__main__':
 			for __ in range(N_train/CRP_MINI_BATCH):
 
 				I = np.random.choice(range(N_train), size=100, replace=False)
-				sess.run(train_step, feed_dict={
+				sess.run([train_step, bn_update], feed_dict={
 					training: True,
 					crp_labels: train_labels[I],
 					pxl_labels: pxl_labs,
@@ -289,15 +271,15 @@ if __name__ == '__main__':
 					is_crops: True,
 				})
 
-			# Train batch normalization only (catch-up)
-			for __ in range(5000):
+			# Update batch normalization mean and std only.
+			for __ in range(150):
 				I = np.random.choice(range(N_train), size=100, replace=False)
 				sess.run(bn_update, feed_dict={
-					training: True,
+					training: False,
 					crp_labels: train_labels[I],
 					pxl_labels: pxl_labs,
 					images: train_crops[I],
-					keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
+					keep_prob: [1. for i in range(DEPTH)],
 					augment: False,
 					is_crops: True,
 				})
@@ -329,7 +311,6 @@ if __name__ == '__main__':
 				new_saver = tf.train.Saver(max_to_keep=2)
 				new_saver.save(sess, "saved/top_down_net")
 
-		print "Min. Crop err: ", CRP_ERR
 		print "Crop Class Training Done!"
 
 		# print "Segmentation Training..."
