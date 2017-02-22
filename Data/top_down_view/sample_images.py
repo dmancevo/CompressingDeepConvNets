@@ -34,14 +34,14 @@ class copyThread(threading.Thread):
 			with open("{0}.json".format(path), "rb") as f:
 				label = json.load(f)
 
-			coords    = [coord for coord in label["heads"] if is_valid_crop(coord)]
+			coords = [coord[::-1] for coord in label["heads"] if is_valid_crop(coord)]
 
 			if coords:
-				img       = imread("{0}.jpg".format(path))
-				file_name = labeled[i].split("/")[-1].strip()
-
-				meta[tt][file_name] = coords
-				imsave("./images/{0}/{1}.jpg".format(tt, file_name), img)
+				img = imread("{0}.jpg".format(path))
+				if img.shape == (240, 320, 3):
+					file_name = labeled[i].split("/")[-1].strip()
+					meta[tt][file_name] = coords
+					imsave("./images/{0}/{1}.jpg".format(tt, file_name), img)
 
 
 if __name__ == '__main__':
