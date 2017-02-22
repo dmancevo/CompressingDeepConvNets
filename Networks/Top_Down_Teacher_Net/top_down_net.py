@@ -157,10 +157,16 @@ def graph():
 	'''
 
 	# Placeholders
+	is_crops    = tf.placeholder(dtype=tf.bool, name="is_crops")
 	training    = tf.placeholder(dtype=tf.bool, name="training")
-	crp_labels  = tf.placeholder(dtype=tf.int32, shape=(None,), name="crop_labels")
-	pxl_labels  = tf.placeholder(dtype=tf.int32,
-		   shape=(None, IMAGE_HEIGHT,IMAGE_WIDTH), name="pixel_labels")
+
+	labels      = tf.cond(
+		is_crops,
+		lambda: tf.placeholder(dtype=tf.int32, shape=(None,)),
+		lambda: tf.placeholder(dtype=tf.int32,
+		   shape=(None, IMAGE_HEIGHT,IMAGE_WIDTH))
+		)
+
 	images      = tf.placeholder(dtype=tf.float32,
 		   shape=(None, None, None, 3))
 	keep_prob   = tf.placeholder(dtype=tf.float32, shape=(DEPTH,))
@@ -169,20 +175,18 @@ def graph():
 	# Convolution / Fractional Max Pooling
 	c8 = graph_conv(training, images, augment, keep_prob)
 
-	is_crops = tf.placeholder(dtype=tf.bool, name="is_crops")
-
 	# Process crop or image
 	logits, prob, loss =\
 	tf.cond(
 		is_crops,
-		lambda: graph_crop_class(training, crp_labels, keep_prob, c8),
-		lambda: graph_pxl_class(training, pxl_labels, keep_prob, c8)
+		lambda: graph_crop_class(training, labels, keep_prob, c8),
+		lambda: graph_pxl_class(training, labels, keep_prob, c8)
 	)
 
 	train_step = tf.train.AdamOptimizer().minimize(loss, name="train_step")
 
-	return training, crp_labels, pxl_labels, images, keep_prob, augment, c8,\
-	is_crops, logits, prob, loss, train_step
+	return training, labels, images, keep_prob, augment, c8,\
+	is_crops, logits, prob, train_step
 
 def test(trn, aug, crop):
 	'''
@@ -195,22 +199,20 @@ def test(trn, aug, crop):
 
 	with tf.Session() as sess:
 
-		training, crp_labels, pxl_labels, images, keep_prob, augment, c8,\
-		is_crops, logits, prob, loss, train_step = graph()
+		training, labels, images, keep_prob, augment, c8,\
+		is_crops, logits, prob, train_step = graph()
 
 		init_op = tf.global_variables_initializer()
 		sess.run(init_op)
 
 		print sess.run(prob, feed_dict={
 			training: trn,
-			crp_labels: crp_labs,
-			pxl_labels: pxl_labs,
+			labels: crp_labs if crp else pxl_labs,
 			images: imgs,
 			keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
 			augment: aug,
 			is_crops: crop,
 		}).shape
-
 
 
 if __name__ == '__main__':
@@ -250,21 +252,21 @@ if __name__ == '__main__':
 			init_op    = tf.global_variables_initializer()
 			sess.run(init_op)
 
-		training, crp_labels, pxl_labels, images, keep_prob, augment, c8,\
-		is_crops, logits, prob, loss, train_step = layers
+		training, labels, images, keep_prob, augment, c8,\
+		is_crops, logits, prob, train_step = layers
 
 		bn_update = tf.group(*tf.get_collection(tf.GraphKeys.UPDATE_OPS))
 
 		print "Crop Class Training..."
-		pxl_labs = np.ones(shape=(1,240,320), dtype=int)
+
 		for epoch in range(CRP_EPOCHS):
 			for __ in range(N_train/CRP_MINI_BATCH):
 
 				I = np.random.choice(range(N_train), size=100, replace=False)
 				sess.run([train_step, bn_update], feed_dict={
 					training: True,
-					crp_labels: train_labels[I],
-					pxl_labels: pxl_labs,
+					labels: train_labels[I],
+					# pxl_labels: pxl_labs,
 					images: train_crops[I],
 					keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
 					augment: True,
@@ -276,8 +278,7 @@ if __name__ == '__main__':
 				I = np.random.choice(range(N_train), size=100, replace=False)
 				sess.run(bn_update, feed_dict={
 					training: False,
-					crp_labels: train_labels[I],
-					pxl_labels: pxl_labs,
+					labels: train_labels[I],
 					images: train_crops[I],
 					keep_prob: [1. for i in range(DEPTH)],
 					augment: False,
@@ -289,8 +290,7 @@ if __name__ == '__main__':
 				y_hat = np.concatenate((
 					y_hat, sess.run(prob, feed_dict={
 					training: False,
-					crp_labels: test_labels[J],
-					pxl_labels: pxl_labs,
+					labels: test_labels[J],
 					images: test_crops[J],
 					keep_prob: [1. for i in range(DEPTH)],
 					augment: False,
