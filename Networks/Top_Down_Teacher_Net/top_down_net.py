@@ -13,7 +13,7 @@ PXL_EPOCHS     = 0
 
 FMP      = np.sqrt(2)
 DEPTH    = 8
-CHANNELS = 15
+CHANNELS = 10
 MAX_CHAN = DEPTH*CHANNELS
 PXL_CHAN = 8
 
@@ -61,12 +61,23 @@ def batch_norm(current, training):
 	'''
 	Batch Normalization wrapper.
 	'''
-	current = tf.layers.batch_normalization(
-			current,
-			axis=-1,
-			training=training,
-			momentum=0.9,
-		)
+	# current = tf.layers.batch_normalization(
+	# 		current,
+	# 		axis=-1,
+	# 		training=training,
+	# 		momentum=0.9, #maybe 0.99 would be better
+	# 		center=True,
+	# 		scale=False
+	# 	)
+	bn_mean, bn_var = tf.nn.moments(current, axes=[0,1,2])
+	current = tf.nn.batch_normalization(
+		x=current,
+		mean=bn_mean,
+		variance=bn_var,
+		offset=None,
+		scale=None,
+		variance_epsilon=0.001
+	)
 
 	return current
 
@@ -79,11 +90,7 @@ def graph_conv(training, images, augment, keep_prob):
 	current = tf.cond(augment, lambda: data_aug(images), lambda: images)
 
 	chan_in, chan_out = 3, CHANNELS
-	current = tf.layers.batch_normalization(
-		current,
-		axis=-1,
-		training=training
-	)
+	current = batch_norm(current, training)
 	for i in range(1,DEPTH+1):
 		chan_out = i*CHANNELS
 		current  = conv(current, 2, 2, chan_in, chan_out)
@@ -299,27 +306,35 @@ if __name__ == '__main__':
 			for __ in range(N_train/CRP_MINI_BATCH):
 
 				I = np.random.choice(range(N_train), size=100, replace=False)
-				sess.run([train_step, bn_update], feed_dict={
-					training: True,
-					labels: train_labels[I],
-					# pxl_labels: pxl_labs,
-					images: train_crops[I],
-					keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
-					augment: True,
-					is_crops: True,
-				})
+			# 	sess.run([train_step, bn_update], feed_dict={
+			# 		training: True,
+			# 		labels: train_labels[I],
+			# 		images: train_crops[I],
+			# 		keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
+			# 		augment: True,
+			# 		is_crops: True,
+			# 	})
 
-			# Update batch normalization mean and std only.
-			for __ in range(150):
-				I = np.random.choice(range(N_train), size=100, replace=False)
-				sess.run(bn_update, feed_dict={
-					training: False,
-					labels: train_labels[I],
-					images: train_crops[I],
-					keep_prob: [1. for i in range(DEPTH)],
-					augment: False,
-					is_crops: True,
-				})
+			# # Update batch normalization mean and std only.
+			# for __ in range(250):
+			# 	I = np.random.choice(range(N_train), size=100, replace=False)
+			# 	sess.run(bn_update, feed_dict={
+			# 		training: False,
+			# 		labels: train_labels[I],
+			# 		images: train_crops[I],
+			# 		keep_prob: [1. for i in range(DEPTH)],
+			# 		augment: False,
+			# 		is_crops: True,
+			# 	})
+
+				sess.run(train_step, feed_dict={
+						training: True,
+						labels: train_labels[I],
+						images: train_crops[I],
+						keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
+						augment: True,
+						is_crops: True,
+					})
 
 			y_hat = np.empty(shape=(0,2))
 			for J in np.array_split(range(N_test),  16):
@@ -365,7 +380,7 @@ if __name__ == '__main__':
 				})
 
 			# Update batch normalization mean and std only.
-			for __ in range(150):
+			for __ in range(250):
 				pxl_labs, imgs = pxl_img_lab()
 				sess.run(bn_update, feed_dict={
 					training: False,
