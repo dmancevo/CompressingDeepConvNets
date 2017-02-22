@@ -5,11 +5,11 @@ import re
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 CRP_ERR        = 0.048
-CRP_EPOCHS     = 1
+CRP_EPOCHS     = 50
 CRP_MINI_BATCH = 100
 
 PXL_F1         = 0.98
-PXL_EPOCHS     = 1
+PXL_EPOCHS     = 0
 
 FMP      = np.sqrt(2)
 DEPTH    = 8
@@ -233,38 +233,42 @@ if __name__ == '__main__':
 
 	# test(trn=True, aug=True, crop=False)
 
-	# with open("{0}/train.pkl".format(DATA_PATH), "rb") as f:
-	# 	train_labels, train_crops = pkl.load(f)
+	if CRP_EPOCHS:
 
-	# with open("{0}/test.pkl".format(DATA_PATH), "rb") as f:
-	# 	test_labels, test_crops = pkl.load(f)
+		with open("{0}/train.pkl".format(DATA_PATH), "rb") as f:
+			train_labels, train_crops = pkl.load(f)
 
-
-	# train_labels, train_crops = train_labels[:16300], train_crops[:16300]
-	# test_labels, test_crops = test_labels[:4800], test_crops[:4800]
-
-	# N_train, N_test = len(train_labels), len(test_labels)
+		with open("{0}/test.pkl".format(DATA_PATH), "rb") as f:
+			test_labels, test_crops = pkl.load(f)
 
 
-	with open(DATA_PATH+"/images/meta.pkl", "rb") as f:
-		meta = pkl.load(f)
+		train_labels, train_crops = train_labels[:16300], train_crops[:16300]
+		test_labels, test_crops = test_labels[:4800], test_crops[:4800]
 
-	trn_str_queue = ["{0}/{1}/{2}.jpg".format(DATA_PATH, "images/train", img) \
-	for img in meta["train"].keys()]
+		N_train, N_test = len(train_labels), len(test_labels)
 
-	tst_str_queue = ["{0}/{1}/{2}.jpg".format(DATA_PATH, "images/test", img) \
-	for img in meta["test"].keys()]
 
-	trn_file_queue = tf.train.string_input_producer(trn_str_queue, shuffle=True)
-	tst_file_queue = tf.train.string_input_producer(tst_str_queue, shuffle=True)
+	if PXL_EPOCHS:
 
-	image_reader = tf.WholeFileReader()
+		with open(DATA_PATH+"/images/meta.pkl", "rb") as f:
+			meta = pkl.load(f)
 
-	trn_file, trn_image_file = image_reader.read(trn_file_queue)
-	tst_file, tst_image_file = image_reader.read(tst_file_queue)
+		trn_str_queue = ["{0}/{1}/{2}.jpg".format(DATA_PATH, "images/train", img) \
+		for img in meta["train"].keys()]
 
-	trn_image = tf.image.decode_jpeg(trn_image_file)
-	tst_image = tf.image.decode_jpeg(tst_image_file)
+		tst_str_queue = ["{0}/{1}/{2}.jpg".format(DATA_PATH, "images/test", img) \
+		for img in meta["test"].keys()]
+
+		trn_file_queue = tf.train.string_input_producer(trn_str_queue, shuffle=True)
+		tst_file_queue = tf.train.string_input_producer(tst_str_queue, shuffle=True)
+
+		image_reader = tf.WholeFileReader()
+
+		trn_file, trn_image_file = image_reader.read(trn_file_queue)
+		tst_file, tst_image_file = image_reader.read(tst_file_queue)
+
+		trn_image = tf.image.decode_jpeg(trn_image_file)
+		tst_image = tf.image.decode_jpeg(tst_image_file)
 
 	with tf.Session() as sess:
 
@@ -291,59 +295,59 @@ if __name__ == '__main__':
 
 		bn_update = tf.group(*tf.get_collection(tf.GraphKeys.UPDATE_OPS))
 
-		# for epoch in range(CRP_EPOCHS):
-		# 	for __ in range(N_train/CRP_MINI_BATCH):
+		for epoch in range(CRP_EPOCHS):
+			for __ in range(N_train/CRP_MINI_BATCH):
 
-		# 		I = np.random.choice(range(N_train), size=100, replace=False)
-		# 		sess.run([train_step, bn_update], feed_dict={
-		# 			training: True,
-		# 			labels: train_labels[I],
-		# 			# pxl_labels: pxl_labs,
-		# 			images: train_crops[I],
-		# 			keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
-		# 			augment: True,
-		# 			is_crops: True,
-		# 		})
+				I = np.random.choice(range(N_train), size=100, replace=False)
+				sess.run([train_step, bn_update], feed_dict={
+					training: True,
+					labels: train_labels[I],
+					# pxl_labels: pxl_labs,
+					images: train_crops[I],
+					keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
+					augment: True,
+					is_crops: True,
+				})
 
-		# 	# Update batch normalization mean and std only.
-		# 	for __ in range(150):
-		# 		I = np.random.choice(range(N_train), size=100, replace=False)
-		# 		sess.run(bn_update, feed_dict={
-		# 			training: False,
-		# 			labels: train_labels[I],
-		# 			images: train_crops[I],
-		# 			keep_prob: [1. for i in range(DEPTH)],
-		# 			augment: False,
-		# 			is_crops: True,
-		# 		})
+			# Update batch normalization mean and std only.
+			for __ in range(150):
+				I = np.random.choice(range(N_train), size=100, replace=False)
+				sess.run(bn_update, feed_dict={
+					training: False,
+					labels: train_labels[I],
+					images: train_crops[I],
+					keep_prob: [1. for i in range(DEPTH)],
+					augment: False,
+					is_crops: True,
+				})
 
-		# 	y_hat = np.empty(shape=(0,2))
-		# 	for J in np.array_split(range(N_test),  16):
-		# 		y_hat = np.concatenate((
-		# 			y_hat, sess.run(prob, feed_dict={
-		# 			training: False,
-		# 			labels: test_labels[J],
-		# 			images: test_crops[J],
-		# 			keep_prob: [1. for i in range(DEPTH)],
-		# 			augment: False,
-		# 			is_crops: True,
-		# 		})))
+			y_hat = np.empty(shape=(0,2))
+			for J in np.array_split(range(N_test),  16):
+				y_hat = np.concatenate((
+					y_hat, sess.run(prob, feed_dict={
+					training: False,
+					labels: test_labels[J],
+					images: test_crops[J],
+					keep_prob: [1. for i in range(DEPTH)],
+					augment: False,
+					is_crops: True,
+				})))
 
-		# 	print "Crp Epoch: ", epoch+1
-		# 	err = 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
-		# 	print "Crp Err: ", err
-		# 	print "Crp Precision: ", precision_score(test_labels,np.argmax(y_hat,axis=1))
-		# 	print "Crp Recall: ", recall_score(test_labels,np.argmax(y_hat,axis=1))
-		# 	print "Crp F1 Score: ", f1_score(test_labels,np.argmax(y_hat,axis=1))
+			print "Crp Epoch: ", epoch+1
+			err = 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
+			print "Crp Err: ", err
+			print "Crp Precision: ", precision_score(test_labels,np.argmax(y_hat,axis=1))
+			print "Crp Recall: ", recall_score(test_labels,np.argmax(y_hat,axis=1))
+			print "Crp F1 Score: ", f1_score(test_labels,np.argmax(y_hat,axis=1))
 
-		# 	if err < CRP_ERR:
-		# 		print "Crp Saving..."
-		# 		CRP_ERR = err
-		# 		saved_crop_epochs = epoch+1
-		# 		new_saver = tf.train.Saver(max_to_keep=2)
-		# 		new_saver.save(sess, "saved/top_down_net")
+			if err < CRP_ERR:
+				print "Crp Saving..."
+				CRP_ERR = err
+				saved_crop_epochs = epoch+1
+				new_saver = tf.train.Saver(max_to_keep=2)
+				new_saver.save(sess, "saved/top_down_net")
 
-		# print "\n\n\n"
+		print "\n\n\n"
 
 		coord   = tf.train.Coordinator()
 		threads = tf.train.start_queue_runners(coord=coord)
