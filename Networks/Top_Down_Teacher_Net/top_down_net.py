@@ -4,16 +4,14 @@ import tensorflow as tf
 import re
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
-CRP_ERR        = 0.048
-CRP_EPOCHS     = 50
+CRP_EPOCHS     = 15
 CRP_MINI_BATCH = 100
 
-PXL_F1         = 0.98
 PXL_EPOCHS     = 0
 
 FMP      = np.sqrt(2)
 DEPTH    = 8
-CHANNELS = 10
+CHANNELS = 20
 MAX_CHAN = DEPTH*CHANNELS
 PXL_CHAN = 8
 
@@ -61,23 +59,14 @@ def batch_norm(current, training):
 	'''
 	Batch Normalization wrapper.
 	'''
-	# current = tf.layers.batch_normalization(
-	# 		current,
-	# 		axis=-1,
-	# 		training=training,
-	# 		momentum=0.9, #maybe 0.99 would be better
-	# 		center=True,
-	# 		scale=False
-	# 	)
-	bn_mean, bn_var = tf.nn.moments(current, axes=[0,1,2])
-	current = tf.nn.batch_normalization(
-		x=current,
-		mean=bn_mean,
-		variance=bn_var,
-		offset=None,
-		scale=None,
-		variance_epsilon=0.001
-	)
+	current = tf.layers.batch_normalization(
+			current,
+			axis=-1,
+			training=training,
+			momentum=0.99,
+			center=True,
+			scale=False
+		)
 
 	return current
 
@@ -302,39 +291,33 @@ if __name__ == '__main__':
 
 		bn_update = tf.group(*tf.get_collection(tf.GraphKeys.UPDATE_OPS))
 
+		print "Training..."
 		for epoch in range(CRP_EPOCHS):
+			print "epoch: ", epoch+1
 			for __ in range(N_train/CRP_MINI_BATCH):
 
 				I = np.random.choice(range(N_train), size=100, replace=False)
-			# 	sess.run([train_step, bn_update], feed_dict={
-			# 		training: True,
-			# 		labels: train_labels[I],
-			# 		images: train_crops[I],
-			# 		keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
-			# 		augment: True,
-			# 		is_crops: True,
-			# 	})
+				sess.run([train_step, bn_update], feed_dict={
+					training: True,
+					labels: train_labels[I],
+					images: train_crops[I],
+					keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
+					augment: True,
+					is_crops: True,
+				})
 
-			# # Update batch normalization mean and std only.
-			# for __ in range(250):
-			# 	I = np.random.choice(range(N_train), size=100, replace=False)
-			# 	sess.run(bn_update, feed_dict={
-			# 		training: False,
-			# 		labels: train_labels[I],
-			# 		images: train_crops[I],
-			# 		keep_prob: [1. for i in range(DEPTH)],
-			# 		augment: False,
-			# 		is_crops: True,
-			# 	})
-
-				sess.run(train_step, feed_dict={
-						training: True,
-						labels: train_labels[I],
-						images: train_crops[I],
-						keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
-						augment: True,
-						is_crops: True,
-					})
+		if CRP_EPOCHS:
+			# Update batch normalization mean and std only.
+			for __ in range(1500):
+				I = np.random.choice(range(N_train), size=100, replace=False)
+				sess.run(bn_update, feed_dict={
+					training: False,
+					labels: train_labels[I],
+					images: train_crops[I],
+					keep_prob: [1. for i in range(DEPTH)],
+					augment: False,
+					is_crops: True,
+				})
 
 			y_hat = np.empty(shape=(0,2))
 			for J in np.array_split(range(N_test),  16):
@@ -348,19 +331,12 @@ if __name__ == '__main__':
 					is_crops: True,
 				})))
 
-			print "Crp Epoch: ", epoch+1
-			err = 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
-			print "Crp Err: ", err
+			print "Crp Err: ", 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
 			print "Crp Precision: ", precision_score(test_labels,np.argmax(y_hat,axis=1))
 			print "Crp Recall: ", recall_score(test_labels,np.argmax(y_hat,axis=1))
 			print "Crp F1 Score: ", f1_score(test_labels,np.argmax(y_hat,axis=1))
-
-			if err < CRP_ERR:
-				print "Crp Saving..."
-				CRP_ERR = err
-				saved_crop_epochs = epoch+1
-				new_saver = tf.train.Saver(max_to_keep=2)
-				new_saver.save(sess, "saved/top_down_net")
+			# new_saver = tf.train.Saver(max_to_keep=2)
+			# new_saver.save(sess, "saved/top_down_net")
 
 		print "\n\n\n"
 
@@ -368,6 +344,7 @@ if __name__ == '__main__':
 		threads = tf.train.start_queue_runners(coord=coord)
 
 		for epoch in range(PXL_EPOCHS):
+			print "epoch: ", epoch+1
 			for __ in range(len(meta["train"])):
 				pxl_labs, imgs = pxl_img_lab()
 				sess.run([train_step, bn_update], feed_dict={
@@ -379,8 +356,10 @@ if __name__ == '__main__':
 					is_crops: False,
 				})
 
+		if PXL_EPOCHS:
+
 			# Update batch normalization mean and std only.
-			for __ in range(250):
+			for __ in range(1500):
 				pxl_labs, imgs = pxl_img_lab()
 				sess.run(bn_update, feed_dict={
 					training: False,
@@ -408,23 +387,14 @@ if __name__ == '__main__':
 					test_labels,
 					np.reshape(pxl_labs, newshape=(-1,))
 				))
-
-
 			y_hat = np.reshape(y_hat, newshape=(-1, 2))
 
-			print "Pxl Epoch: ", epoch+1
 			print "Pxl Err: ", 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
 			print "Pxl Precision: ", precision_score(test_labels,np.argmax(y_hat,axis=1))
 			print "Pxl Recall: ", recall_score(test_labels,np.argmax(y_hat,axis=1))
-			f1 = f1_score(test_labels,np.argmax(y_hat,axis=1))
-			print "Pxl F1 Score: ", f1
-
-			if PXL_F1<f1:
-				print "Pxl Saving..."
-				PXL_MIN_ERR = f1
-				saved_crop_epochs = epoch+1
-				new_saver = tf.train.Saver(max_to_keep=2)
-				new_saver.save(sess, "saved/top_down_net")
+			print "Pxl F1 Score: ", f1_score(test_labels,np.argmax(y_hat,axis=1))
+			new_saver = tf.train.Saver(max_to_keep=2)
+			new_saver.save(sess, "saved/top_down_net")
 
 		coord.request_stop()
 		coord.join(threads)
