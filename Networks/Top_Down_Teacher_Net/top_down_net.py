@@ -4,7 +4,10 @@ import tensorflow as tf
 import re
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
-CRP_EPOCHS     = 15
+### An alternative to top_down_net where batch normalization is always
+### performed using the mini-batch statistics.
+
+CRP_EPOCHS     = 50
 CRP_MINI_BATCH = 100
 
 PXL_EPOCHS     = 0
@@ -31,6 +34,39 @@ def data_aug(images):
 
 	return images
 
+def pxl_dense_targets():
+	'''
+	Produce a dense target for localization training.
+	'''
+
+	coords = tf.placeholder(dtype=tf.float32, shape=(None, 2))
+	tau  = tf.placeholder(dtype=tf.float32)
+
+	rows = tf.meshgrid(
+		tf.range(IMAGE_HEIGHT, dtype=tf.float32),
+	 	tf.ones(IMAGE_HEIGHT),
+	 	indexing='ij'
+	 )[0]
+	cols = tf.meshgrid(
+		tf.ones(IMAGE_WIDTH),
+		tf.range(IMAGE_WIDTH, dtype=tf.float32),
+		indexing='ij'
+	)[1]
+
+	target = tf.zeros(shape=(IMAGE_HEIGHT,IMAGE_WIDTH), dtype=tf.float32)
+
+	target_list = tf.map_fn(
+		lambda coord: \
+		tf.minimum(1., tf.exp(tau*(-tf.square(cols-coord[0])-\
+					tf.square(rows-coord[1])))
+		),
+		coords
+	)
+
+	target = tf.minimum(1., tf.reduce_sum(target_list, axis=0))
+
+	return coords, tau, target
+
 def conv(current, height, width, chan_in, chan_out, padding="SAME"):
 	'''
 	Convolutional layer.
@@ -55,22 +91,27 @@ def leaky_relu(current):
 	a = tf.Variable(np.random.uniform(0.07,0.13), dtype=tf.float32)
 	return tf.maximum(current, a*current)
 
-def batch_norm(current, training):
+def batch_norm(current):
 	'''
-	Batch Normalization wrapper.
+	Batch Normalization performed exclusively using mini-batch statistics.
 	'''
-	current = tf.layers.batch_normalization(
-			current,
-			axis=-1,
-			training=training,
-			momentum=0.99,
-			center=True,
-			scale=False
-		)
+	beta = tf.Variable(
+		np.random.normal(0,0.01, current.get_shape()[-1]),
+		dtype=tf.float32
+	)
+	bn_mean, bn_var = tf.nn.moments(current, axes=[0,1,2])
+	current = tf.nn.batch_normalization(
+		x=current,
+		mean=bn_mean,
+		variance=bn_var,
+		offset=beta,
+		scale=None,
+		variance_epsilon=0.001
+	)
 
 	return current
 
-def graph_conv(training, images, augment, keep_prob):
+def graph_conv(images, augment, keep_prob):
 	'''
 	Build convolution-fractional max pooling portion of graph.
 	'''
@@ -79,7 +120,7 @@ def graph_conv(training, images, augment, keep_prob):
 	current = tf.cond(augment, lambda: data_aug(images), lambda: images)
 
 	chan_in, chan_out = 3, CHANNELS
-	current = batch_norm(current, training)
+	current = batch_norm(current)
 	for i in range(1,DEPTH+1):
 		chan_out = i*CHANNELS
 		current  = conv(current, 2, 2, chan_in, chan_out)
@@ -90,19 +131,19 @@ def graph_conv(training, images, augment, keep_prob):
 			pooling_ratio=(1.0, FMP, FMP, 1.0),
 			pseudo_random=True,
 			)[0]
-		current = batch_norm(current, training)
+		current = batch_norm(current)
 		chan_in  = i*CHANNELS
 
 	return current
 
-def graph_crop_class(training, labels, keep_prob, c8):
+def graph_crop_class(labels, keep_prob, c8):
 	'''
 	Crop classification portion of the graph.
 	'''
 	current = conv(c8, 2, 4, MAX_CHAN, MAX_CHAN, padding="VALID")
 	current = leaky_relu(current)
 	current = tf.nn.dropout(current, keep_prob[-1])
-	current = batch_norm(current, training)
+	current = batch_norm(current)
 	current = conv(current, 1, 1, MAX_CHAN, 2)
 
 	crop_log   = current[:,0,0,:]
@@ -112,7 +153,7 @@ def graph_crop_class(training, labels, keep_prob, c8):
 
 	return crop_log, crop_prob, crp_loss
 
-def graph_pxl_class(training, pxl_labels, keep_prob, c8):
+def graph_pxl_class(pxl_labels, keep_prob, c8):
 	'''
 	Segmentation portion of the graph.
 	'''
@@ -135,7 +176,7 @@ def graph_pxl_class(training, pxl_labels, keep_prob, c8):
 	current = leaky_relu(current)
 	current = tf.nn.dropout(current, keep_prob[-1])
 	current.set_shape((None,IMAGE_HEIGHT,IMAGE_WIDTH,PXL_CHAN))
-	current = batch_norm(current, training)
+	current = batch_norm(current)
 	current = conv(current, 1, 1, PXL_CHAN, 2, padding="VALID")
 
 	pxl_log      = current
@@ -154,7 +195,6 @@ def graph():
 
 	# Placeholders
 	is_crops    = tf.placeholder(dtype=tf.bool, name="is_crops")
-	training    = tf.placeholder(dtype=tf.bool, name="training")
 
 	labels      = tf.cond(
 		is_crops,
@@ -169,26 +209,26 @@ def graph():
 	augment = tf.placeholder(dtype=tf.bool, name="augment")
 
 	# Convolution / Fractional Max Pooling
-	c8 = graph_conv(training, images, augment, keep_prob)
+	c8 = graph_conv(images, augment, keep_prob)
 
 	# Process crop or image
 	logits, prob, loss =\
 	tf.cond(
 		is_crops,
-		lambda: graph_crop_class(training, labels, keep_prob, c8),
-		lambda: graph_pxl_class(training, labels, keep_prob, c8)
+		lambda: graph_crop_class(labels, keep_prob, c8),
+		lambda: graph_pxl_class(labels, keep_prob, c8)
 	)
 
 	train_step = tf.train.AdamOptimizer().minimize(loss, name="train_step")
 
-	return training, labels, images, keep_prob, augment, c8,\
+	return labels, images, keep_prob, augment, c8,\
 	is_crops, logits, prob, train_step
 
-def pxl_img_lab():
+def pxl_img_lab(file, image):
 	'''
 	Produce a batch of images and pixel labels.
 	'''
-	image_file, tensor_image = sess.run([trn_file, trn_image])
+	image_file, tensor_image = sess.run([file, image])
 	image_name = re.match(r'.*\/([^\/]*)\.jpg',image_file).group(1)
 
 	pxl_lab = np.zeros(shape=(IMAGE_HEIGHT,IMAGE_WIDTH), dtype=int)
@@ -209,14 +249,13 @@ def test(trn, aug, crop):
 
 	with tf.Session() as sess:
 
-		training, labels, images, keep_prob, augment, c8,\
+		labels, images, keep_prob, augment, c8,\
 		is_crops, logits, prob, train_step = graph()
 
 		init_op = tf.global_variables_initializer()
 		sess.run(init_op)
 
 		print sess.run(prob, feed_dict={
-			training: trn,
 			labels: crp_labs if crp else pxl_labs,
 			images: imgs,
 			keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
@@ -286,36 +325,22 @@ if __name__ == '__main__':
 			init_op    = tf.global_variables_initializer()
 			sess.run(init_op)
 
-		training, labels, images, keep_prob, augment, c8,\
+		labels, images, keep_prob, augment, c8,\
 		is_crops, logits, prob, train_step = layers
 
 		bn_update = tf.group(*tf.get_collection(tf.GraphKeys.UPDATE_OPS))
 
-		print "Training..."
+		min_err = 0.05
 		for epoch in range(CRP_EPOCHS):
 			print "epoch: ", epoch+1
 			for __ in range(N_train/CRP_MINI_BATCH):
 
 				I = np.random.choice(range(N_train), size=100, replace=False)
-				sess.run([train_step, bn_update], feed_dict={
-					training: True,
+				sess.run(train_step, feed_dict={
 					labels: train_labels[I],
 					images: train_crops[I],
 					keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
 					augment: True,
-					is_crops: True,
-				})
-
-		if CRP_EPOCHS:
-			# Update batch normalization mean and std only.
-			for __ in range(1500):
-				I = np.random.choice(range(N_train), size=100, replace=False)
-				sess.run(bn_update, feed_dict={
-					training: False,
-					labels: train_labels[I],
-					images: train_crops[I],
-					keep_prob: [1. for i in range(DEPTH)],
-					augment: False,
 					is_crops: True,
 				})
 
@@ -323,7 +348,6 @@ if __name__ == '__main__':
 			for J in np.array_split(range(N_test),  16):
 				y_hat = np.concatenate((
 					y_hat, sess.run(prob, feed_dict={
-					training: False,
 					labels: test_labels[J],
 					images: test_crops[J],
 					keep_prob: [1. for i in range(DEPTH)],
@@ -331,24 +355,28 @@ if __name__ == '__main__':
 					is_crops: True,
 				})))
 
-			print "Crp Err: ", 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
-			print "Crp Precision: ", precision_score(test_labels,np.argmax(y_hat,axis=1))
-			print "Crp Recall: ", recall_score(test_labels,np.argmax(y_hat,axis=1))
-			print "Crp F1 Score: ", f1_score(test_labels,np.argmax(y_hat,axis=1))
-			# new_saver = tf.train.Saver(max_to_keep=2)
-			# new_saver.save(sess, "saved/top_down_net")
+			err = 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
+			print "Crp Err: ", err
+			if err<min_err:
+				min_err=err
+				new_saver = tf.train.Saver(max_to_keep=2)
+				new_saver.save(sess, "saved/top_down_net")
+
+				print "Crp Precision: ", precision_score(test_labels,np.argmax(y_hat,axis=1))
+				print "Crp Recall: ", recall_score(test_labels,np.argmax(y_hat,axis=1))
+				print "Crp F1 Score: ", f1_score(test_labels,np.argmax(y_hat,axis=1))
 
 		print "\n\n\n"
 
 		coord   = tf.train.Coordinator()
 		threads = tf.train.start_queue_runners(coord=coord)
 
+		max_f1  = 0.9
 		for epoch in range(PXL_EPOCHS):
 			print "epoch: ", epoch+1
 			for __ in range(len(meta["train"])):
-				pxl_labs, imgs = pxl_img_lab()
+				pxl_labs, imgs = pxl_img_lab(trn_file, trn_image)
 				sess.run([train_step, bn_update], feed_dict={
-					training: True,
 					labels: pxl_labs,
 					images: imgs,
 					keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
@@ -356,26 +384,11 @@ if __name__ == '__main__':
 					is_crops: False,
 				})
 
-		if PXL_EPOCHS:
-
-			# Update batch normalization mean and std only.
-			for __ in range(1500):
-				pxl_labs, imgs = pxl_img_lab()
-				sess.run(bn_update, feed_dict={
-					training: False,
-					labels: pxl_labs,
-					images: imgs,
-					keep_prob: [1. for i in range(DEPTH)],
-					augment: False,
-					is_crops: True,
-				})
-
 			y_hat, test_labels = np.empty(shape=(0,2)), np.empty(shape=(0,))
 			for __ in range(len(meta["test"])):
-				pxl_labs, imgs = pxl_img_lab()
+				pxl_labs, imgs = pxl_img_lab(tst_file, tst_image)
 				y_hat = np.concatenate((
 					y_hat, np.reshape(sess.run(prob, feed_dict={
-					training: False,
 					labels: pxl_labs,
 					images: imgs,
 					keep_prob: [1. for i in range(DEPTH)],
@@ -389,12 +402,18 @@ if __name__ == '__main__':
 				))
 			y_hat = np.reshape(y_hat, newshape=(-1, 2))
 
-			print "Pxl Err: ", 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
-			print "Pxl Precision: ", precision_score(test_labels,np.argmax(y_hat,axis=1))
-			print "Pxl Recall: ", recall_score(test_labels,np.argmax(y_hat,axis=1))
-			print "Pxl F1 Score: ", f1_score(test_labels,np.argmax(y_hat,axis=1))
-			new_saver = tf.train.Saver(max_to_keep=2)
-			new_saver.save(sess, "saved/top_down_net")
+			curr_f1 = f1_score(test_labels,np.argmax(y_hat,axis=1))
+
+			if max_f1<curr_f1:
+				max_f1=curr_f1
+				new_saver = tf.train.Saver(max_to_keep=2)
+				new_saver.save(sess, "saved/top_down_net")
+
+			
+				print "Pxl Err: ", 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
+				print "Pxl Precision: ", precision_score(test_labels,np.argmax(y_hat,axis=1))
+				print "Pxl Recall: ", recall_score(test_labels,np.argmax(y_hat,axis=1))
+				print "Pxl F1 Score: ", curr_f1
 
 		coord.request_stop()
 		coord.join(threads)
