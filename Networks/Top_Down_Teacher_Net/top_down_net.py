@@ -44,11 +44,11 @@ def pxl_dense_targets():
 
 	rows = tf.meshgrid(
 		tf.range(IMAGE_HEIGHT, dtype=tf.float32),
-	 	tf.ones(IMAGE_HEIGHT),
+	 	tf.ones(IMAGE_WIDTH),
 	 	indexing='ij'
 	 )[0]
 	cols = tf.meshgrid(
-		tf.ones(IMAGE_WIDTH),
+		tf.ones(IMAGE_HEIGHT),
 		tf.range(IMAGE_WIDTH, dtype=tf.float32),
 		indexing='ij'
 	)[1]
@@ -57,8 +57,8 @@ def pxl_dense_targets():
 
 	target_list = tf.map_fn(
 		lambda coord: \
-		tf.minimum(1., tf.exp(tau*(-tf.square(cols-coord[0])-\
-					tf.square(rows-coord[1])))
+		tf.minimum(1., tf.exp(tau*(-tf.square(rows-coord[0])-\
+					tf.square(cols-coord[1])))
 		),
 		coords
 	)
