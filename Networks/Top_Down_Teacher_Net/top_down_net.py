@@ -3,6 +3,10 @@ import pickle as pkl
 import tensorflow as tf
 import re
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+from PIL import ImageFile
+from scipy.misc import imread
+
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 ### An alternative to top_down_net where batch normalization is always
 ### performed using the mini-batch statistics.
@@ -224,13 +228,16 @@ def graph():
 	return labels, images, keep_prob, augment, tau, c8,\
 	is_crops, logits, f_labels, prob, train_step
 
-def pxl_img_lab(tt, file, image):
+def pxl_img_lab(tt, image_name=None):
 	'''
 	Produce a batch of images and pixel labels.
 	'''
-	image_file, tensor_image = sess.run([file, image])
-	image_name = re.match(r'.*\/([^\/]*)\.jpg',image_file).group(1)
-	return meta[tt][image_name], [tensor_image]
+	if not image_name:
+		image_name = np.random.choice(meta[tt].keys())
+
+	image = imread("{0}/images/{1}/{2}.jpg".format(DATA_PATH,tt,image_name))
+	
+	return meta[tt][image_name], [image]
 
 def test(trn, aug, crop):
 	'''
@@ -281,23 +288,6 @@ if __name__ == '__main__':
 
 		with open(DATA_PATH+"/images/meta.pkl", "rb") as f:
 			meta = pkl.load(f)
-
-		trn_str_queue = ["{0}/{1}/{2}.jpg".format(DATA_PATH, "images/train", img) \
-		for img in meta["train"].keys()]
-
-		tst_str_queue = ["{0}/{1}/{2}.jpg".format(DATA_PATH, "images/test", img) \
-		for img in meta["test"].keys()]
-
-		trn_file_queue = tf.train.string_input_producer(trn_str_queue, shuffle=True)
-		tst_file_queue = tf.train.string_input_producer(tst_str_queue, shuffle=True)
-
-		image_reader = tf.WholeFileReader()
-
-		trn_file, trn_image_file = image_reader.read(trn_file_queue)
-		tst_file, tst_image_file = image_reader.read(tst_file_queue)
-
-		trn_image = tf.image.decode_jpeg(trn_image_file)
-		tst_image = tf.image.decode_jpeg(tst_image_file)
 
 	with tf.Session() as sess:
 
@@ -372,11 +362,11 @@ if __name__ == '__main__':
 		threads = tf.train.start_queue_runners(coord=coord)
 
 		TAU     = 1.0
-		max_f1  = 0.9
+		max_f1  = 0.95
 		for epoch in range(PXL_EPOCHS):
 			print "epoch: ", epoch+1
 			for __ in range(len(meta["train"])):
-				pxl_labs, imgs = pxl_img_lab("train", trn_file, trn_image)
+				pxl_labs, imgs = pxl_img_lab("train")
 				sess.run(train_step, feed_dict={
 					labels: pxl_labs,
 					images: imgs,
@@ -388,7 +378,7 @@ if __name__ == '__main__':
 
 			y_hat, test_labels = np.empty(shape=(0,2)), np.empty(shape=(0,2))
 			for __ in range(len(meta["test"])):
-				pxl_labs, imgs = pxl_img_lab("test", tst_file, tst_image)
+				pxl_labs, imgs = pxl_img_lab("test")
 				y_hat = np.concatenate((
 					y_hat, np.reshape(sess.run(prob, feed_dict={
 					labels: pxl_labs,
