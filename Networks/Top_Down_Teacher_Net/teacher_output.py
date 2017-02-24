@@ -24,39 +24,34 @@ WIDTH_OFFSETS  = []
 
 DATA_PATH = "/notebooks/Data/top_down_view"
 
+def save_logits(file_name, lgts):
+	'''
+	Save logits in the right folder.
+	'''
+	with open("{0}/teacher/pxl/{1}.pkl".format(DATA_PATH, file_name)) as f:
+		pkl.dump(lgts)
+
 
 if __name__ == '__main__':
 
 	if CRPS:
 
+		with open("{0}/train.pkl".format(DATA_PATH), "rb") as f:
+			train_labels, train_crops = pkl.load(f)
+
 		with open("{0}/test.pkl".format(DATA_PATH), "rb") as f:
 			test_labels, test_crops = pkl.load(f)
 
+
+		train_labels, train_crops = train_labels[:16300], train_crops[:16300]
 		test_labels, test_crops = test_labels[:4800], test_crops[:4800]
 
-		N_test = len(test_labels)
+		N_train, N_test = len(train_labels), len(test_labels)
 
 	if PXLS:
 
 		with open(DATA_PATH+"/images/meta.pkl", "rb") as f:
 			meta = pkl.load(f)
-
-		trn_str_queue = ["{0}/{1}/{2}.jpg".format(DATA_PATH, "images/train", img) \
-		for img in meta["train"].keys()]
-
-		tst_str_queue = ["{0}/{1}/{2}.jpg".format(DATA_PATH, "images/test", img) \
-		for img in meta["test"].keys()]
-
-		trn_file_queue = tf.train.string_input_producer(trn_str_queue, shuffle=True)
-		tst_file_queue = tf.train.string_input_producer(tst_str_queue, shuffle=True)
-
-		image_reader = tf.WholeFileReader()
-
-		trn_file, trn_image_file = image_reader.read(trn_file_queue)
-		tst_file, tst_image_file = image_reader.read(tst_file_queue)
-
-		trn_image = tf.image.decode_jpeg(trn_image_file)
-		tst_image = tf.image.decode_jpeg(tst_image_file)
 
 	with tf.Session() as sess:
 
@@ -99,7 +94,8 @@ if __name__ == '__main__':
 						images: test_crops[J],
 						keep_prob: [1. for i in range(DEPTH)],
 						augment: False,
-						is_crops: True
+						is_crops: True,
+						tau: 10.0
 					})))
 
 				if n == 0:
@@ -107,35 +103,79 @@ if __name__ == '__main__':
 				else:
 					y_hat = (n*y_hat + tst_temp)/(n+1.)
 
-				print "Crp Err: ", 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
-				print "Crp Precision: ", precision_score(test_labels,np.argmax(y_hat,axis=1))
-				print "Crp Recall: ", recall_score(test_labels,np.argmax(y_hat,axis=1))
-				print "Crp F1 Score: ", f1_score(test_labels,np.argmax(y_hat,axis=1))
+
+				err = 1-accuracy_score(
+					test_labels,
+					np.argmax(y_hat,axis=1)
+				)
+				precision, recall, f1, support = precision_recall_fscore_support(
+					test_labels,
+					np.argmax(y_hat,axis=1)
+				)
+
+				precision, recall, f1 = precision[1], recall[1], f1[1]
+
+				print "Crp Err: ", err
+				print "Crp Precision: ", precision
+				print "Crp Recall: ", recall
+				print "Crp F1 Score: ", f1
 
 			if SAVE_OUTPUT:
-				with open("notebooks/Data/top_down_view/crp_teacher_logits.pkl","wb") as f:
+				with open("notebooks/Data/top_down_view/teacher/crp_teacher_logits.pkl","wb") as f:
 					pkl.dump(lgts, f)
 
 		if PXLS:
 
-			test_labels, imgs = [], []
-			for __ in range(len(meta["test"])):
-				pxl_labs, imgs = pxl_img_lab(tst_file, tst_image)
-				test_labels   += pxl_lab
-				imgs          +=imgs
+			trn_img_names = meta["traing"].keys()
+			tst_img_names = meta["test"].keys()
+
+			test_labels = np.empty(shape=(0,2))
+			for img_name in tst_img_names:
+				pxl_labs, imgs = pxl_img_lab("test", image_name=img_name)
+				test_labels = np.concatenate((
+					test_labels, np.reshape(sess.run(f_labels, feed_dict={
+					labels: pxl_labs,
+					images: imgs,
+					keep_prob: [1. for i in range(DEPTH)],
+					augment: False,
+					is_crops: False,
+					tau: 10.0
+				}), newshape=(-1,2))))
+
 
 			for n in range(N_avg):
 
-				temp = np.empty(shape=(0,2))
-				for j in range(test_labels.shape[0]):
-					imgs, pxl_labs = imgs[j], test_labels[j]
-					y_hat = np.concatenate((
-						y_hat, np.reshape(sess.run(prob, feed_dict={
+				if SAVE_OUTPUT:
+
+					trn_temp  = np.empty(shape=(0,240, 360, 2))
+					for img_name in trn_img_names:
+						pxl_labs, imgs = pxl_img_lab("train", image_name=img_name)
+						trn_temp = np.concatenate((
+							trn_temp, sess.run(logits, feed_dict={
+							labels: pxl_labs,
+							images: imgs,
+							keep_prob: [1. for i in range(DEPTH)],
+							augment: False,
+							is_crops: False,
+							tau: 10.0
+						})))
+
+					if n == 0:
+						lgts = trn_temp
+					else:
+						lgts = (n*lgts + trn_temp)/(n+1.)
+
+				temp, = np.empty(shape=(0,2))
+				for img_name in tst_img_names:
+					pxl_labs, imgs = pxl_img_lab(tt, image_name=img_name)
+					temp = np.concatenate((
+						temp, np.reshape(sess.run(prob, feed_dict={
 						labels: pxl_labs,
 						images: imgs,
 						keep_prob: [1. for i in range(DEPTH)],
 						augment: False,
 						is_crops: False,
+						tau: 10.0
 					}), newshape=(-1,2))))
 
 				if n == 0:
@@ -143,11 +183,28 @@ if __name__ == '__main__':
 				else:
 					y_hat = (n*y_hat + temp)/(n+1.)
 
+				err = 1-accuracy_score(
+					np.argmax(test_labels, axis=1),
+					np.argmax(y_hat,axis=1)
+				)
+				precision, recall, f1, support = precision_recall_fscore_support(
+					np.argmax(test_labels, axis=1),
+					np.argmax(y_hat,axis=1)
+				)
+
+				precision, recall, f1 = precision[1], recall[1], f1[1]
+
 				print "No. Tests: ", n+1
-				print "Pxl Err: ", 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
-				print "Pxl Precision: ", precision_score(test_labels,np.argmax(y_hat,axis=1))
-				print "Pxl Recall: ", recall_score(test_labels,np.argmax(y_hat,axis=1))
-				print "Pxl F1 Score: ", curr_f1
+				print "Pxl Err: ", err
+				print "Pxl Precision: ", precision
+				print "Pxl Recall: ", recall
+				print "Pxl F1 Score: ", f1
+
+
+			if SAVE_OUTPUT:
+				for i in range(len(trn_img_names))
+					img_name = trn_img_names[i]
+					save_logits(img_name, lgts[i,:,:,:])
 
 
 

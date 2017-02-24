@@ -11,14 +11,14 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 ### An alternative to top_down_net where batch normalization is always
 ### performed using the mini-batch statistics.
 
-CRP_EPOCHS     = 0
+CRP_EPOCHS     = 50
 CRP_MINI_BATCH = 100
 
-PXL_EPOCHS     = 1
+PXL_EPOCHS     = 0
 
 FMP      = np.sqrt(2)
 DEPTH    = 8
-CHANNELS = 10
+CHANNELS = 20
 MAX_CHAN = DEPTH*CHANNELS
 PXL_CHAN = 8
 
@@ -326,6 +326,7 @@ if __name__ == '__main__':
 					keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
 					augment: True,
 					is_crops: True,
+					tau: 1.0
 				})
 
 			y_hat = np.empty(shape=(0,2))
@@ -337,6 +338,7 @@ if __name__ == '__main__':
 					keep_prob: [1. for i in range(DEPTH)],
 					augment: False,
 					is_crops: True,
+					tau: 1.0
 				})))
 
 			err = 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
