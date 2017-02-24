@@ -1,7 +1,7 @@
 import numpy as np
 import pickle as pkl
 import tensorflow as tf
-from sklearn.metrics import accuracy_score, f1_score
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from scipy.ndimage.filters import maximum_filter
 
 from top_down_net import pxl_img_lab
@@ -36,17 +36,21 @@ if __name__ == '__main__':
 
 	if CRPS:
 
-		with open("{0}/train.pkl".format(DATA_PATH), "rb") as f:
-			train_labels, train_crops = pkl.load(f)
+		if SAVE_OUTPUT:
+
+			with open("{0}/train.pkl".format(DATA_PATH), "rb") as f:
+				train_labels, train_crops = pkl.load(f)
+
+			train_labels, train_crops = train_labels[:16300], train_crops[:16300]
+
+			N_train = len(train_labels)
 
 		with open("{0}/test.pkl".format(DATA_PATH), "rb") as f:
 			test_labels, test_crops = pkl.load(f)
 
-
-		train_labels, train_crops = train_labels[:16300], train_crops[:16300]
 		test_labels, test_crops = test_labels[:4800], test_crops[:4800]
 
-		N_train, N_test = len(train_labels), len(test_labels)
+		N_test = len(test_labels)
 
 	if PXLS:
 
@@ -59,8 +63,8 @@ if __name__ == '__main__':
 		saver.restore(sess, tf.train.latest_checkpoint("saved/"))
 		layers = tf.get_collection('layers')
 
-		labels, images, keep_prob, augment, c8,\
-		is_crops, logits, prob, train_step = layers
+		labels, images, keep_prob, augment, temp, c8,\
+		is_crops, logits, f_labels, prob, train_step = layers
 
 
 		if CRPS:
@@ -95,7 +99,7 @@ if __name__ == '__main__':
 						keep_prob: [1. for i in range(DEPTH)],
 						augment: False,
 						is_crops: True,
-						tau: 10.0
+						temp: 10.0
 					})))
 
 				if n == 0:
@@ -115,6 +119,7 @@ if __name__ == '__main__':
 
 				precision, recall, f1 = precision[1], recall[1], f1[1]
 
+				print "Tests: ", n
 				print "Crp Err: ", err
 				print "Crp Precision: ", precision
 				print "Crp Recall: ", recall
@@ -139,7 +144,7 @@ if __name__ == '__main__':
 					keep_prob: [1. for i in range(DEPTH)],
 					augment: False,
 					is_crops: False,
-					tau: 10.0
+					temp: 10.0
 				}), newshape=(-1,2))))
 
 
@@ -157,7 +162,7 @@ if __name__ == '__main__':
 							keep_prob: [1. for i in range(DEPTH)],
 							augment: False,
 							is_crops: False,
-							tau: 10.0
+							temp: 10.0
 						})))
 
 					if n == 0:
@@ -175,7 +180,7 @@ if __name__ == '__main__':
 						keep_prob: [1. for i in range(DEPTH)],
 						augment: False,
 						is_crops: False,
-						tau: 10.0
+						temp: 10.0
 					}), newshape=(-1,2))))
 
 				if n == 0:
@@ -202,7 +207,7 @@ if __name__ == '__main__':
 
 
 			if SAVE_OUTPUT:
-				for i in range(len(trn_img_names))
+				for i in range(len(trn_img_names)):
 					img_name = trn_img_names[i]
 					save_logits(img_name, lgts[i,:,:,:])
 

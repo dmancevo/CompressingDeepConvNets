@@ -11,10 +11,10 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 ### An alternative to top_down_net where batch normalization is always
 ### performed using the mini-batch statistics.
 
-CRP_EPOCHS     = 50
+CRP_EPOCHS     = 0
 CRP_MINI_BATCH = 100
 
-PXL_EPOCHS     = 0
+PXL_EPOCHS     = 1
 
 FMP      = np.sqrt(2)
 DEPTH    = 8
@@ -38,7 +38,7 @@ def data_aug(images):
 
 	return images
 
-def pxl_dense_targets(tau, coords):
+def pxl_dense_targets(temp, coords):
 	'''
 	Produce a dense target for localization training.
 	'''
@@ -58,7 +58,7 @@ def pxl_dense_targets(tau, coords):
 
 	target_list = tf.map_fn(
 		lambda coord: \
-		tf.minimum(1., tf.exp(tau*(-tf.square(rows-coord[0])-\
+		tf.minimum(1., tf.exp(temp*(-tf.square(rows-coord[0])-\
 					tf.square(cols-coord[1])))
 		),
 		tf.to_float(coords)
@@ -154,7 +154,7 @@ def graph_crop_class(crp_labels, keep_prob, c8):
 
 	return crp_log, tf.to_float(crp_labels), crp_prob, crp_loss
 
-def graph_pxl_class(tau, pxl_labels, keep_prob, c8):
+def graph_pxl_class(temp, pxl_labels, keep_prob, c8):
 	'''
 	Segmentation portion of the graph.
 	'''
@@ -184,7 +184,7 @@ def graph_pxl_class(tau, pxl_labels, keep_prob, c8):
 	pxl_prob     = tf.nn.softmax(pxl_log, name="pxl_prob")
 	f_pxl_log    = tf.reshape(pxl_log, shape=(-1,2))
 
-	pxl_labels   = pxl_dense_targets(tau, pxl_labels)
+	pxl_labels   = pxl_dense_targets(temp, pxl_labels)
 	f_pxl_labels = tf.reshape(pxl_labels, shape=(-1,2))
 	pxl_loss     = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
 		logits=f_pxl_log, labels=f_pxl_labels), name="pxl_loss")
@@ -210,7 +210,7 @@ def graph():
 		   shape=(None, None, None, 3))
 	keep_prob   = tf.placeholder(dtype=tf.float32, shape=(DEPTH,))
 	augment     = tf.placeholder(dtype=tf.bool, name="augment")
-	tau         = tf.placeholder(dtype=tf.float32)
+	temp         = tf.placeholder(dtype=tf.float32)
 
 	# Convolution / Fractional Max Pooling
 	c8 = graph_conv(images, augment, keep_prob)
@@ -220,12 +220,12 @@ def graph():
 	tf.cond(
 		is_crops,
 		lambda: graph_crop_class(labels, keep_prob, c8),
-		lambda: graph_pxl_class(tau, labels, keep_prob, c8)
+		lambda: graph_pxl_class(temp, labels, keep_prob, c8)
 	)
 
 	train_step = tf.train.AdamOptimizer().minimize(loss, name="train_step")
 
-	return labels, images, keep_prob, augment, tau, c8,\
+	return labels, images, keep_prob, augment, temp, c8,\
 	is_crops, logits, f_labels, prob, train_step
 
 def pxl_img_lab(tt, image_name=None):
@@ -250,7 +250,7 @@ def test(trn, aug, crop):
 
 	with tf.Session() as sess:
 
-		labels, images, keep_prob, augment, tau, c8,\
+		labels, images, keep_prob, augment, temp, c8,\
 		is_crops, logits, f_labels, prob, train_step = graph()
 
 		init_op = tf.global_variables_initializer()
@@ -309,7 +309,7 @@ if __name__ == '__main__':
 			init_op    = tf.global_variables_initializer()
 			sess.run(init_op)
 
-		labels, images, keep_prob, augment, tau, c8,\
+		labels, images, keep_prob, augment, temp, c8,\
 		is_crops, logits, f_labels, prob, train_step = layers
 
 		bn_update = tf.group(*tf.get_collection(tf.GraphKeys.UPDATE_OPS))
@@ -326,7 +326,7 @@ if __name__ == '__main__':
 					keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
 					augment: True,
 					is_crops: True,
-					tau: 1.0
+					temp: 1.0
 				})
 
 			y_hat = np.empty(shape=(0,2))
@@ -338,7 +338,7 @@ if __name__ == '__main__':
 					keep_prob: [1. for i in range(DEPTH)],
 					augment: False,
 					is_crops: True,
-					tau: 1.0
+					temp: 1.0
 				})))
 
 			err = 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
@@ -363,8 +363,8 @@ if __name__ == '__main__':
 		coord   = tf.train.Coordinator()
 		threads = tf.train.start_queue_runners(coord=coord)
 
-		TAU     = 1.0
-		max_f1  = 0.95
+		TEMP   = 1.0
+		max_f1 = 0.95
 		for epoch in range(PXL_EPOCHS):
 			print "epoch: ", epoch+1
 			for __ in range(len(meta["train"])):
@@ -375,7 +375,7 @@ if __name__ == '__main__':
 					keep_prob: [1., .9, .8, .7, .6, .5, .5, .5],
 					augment: True,
 					is_crops: False,
-					tau: 1.0
+					temp: TEMP
 				})
 
 			y_hat, test_labels = np.empty(shape=(0,2)), np.empty(shape=(0,2))
@@ -388,7 +388,7 @@ if __name__ == '__main__':
 					keep_prob: [1. for i in range(DEPTH)],
 					augment: False,
 					is_crops: False,
-					tau: TAU
+					temp: TEMP
 				}), newshape=(-1,2))))
 
 				test_labels = np.concatenate((
@@ -398,10 +398,10 @@ if __name__ == '__main__':
 					keep_prob: [1. for i in range(DEPTH)],
 					augment: False,
 					is_crops: False,
-					tau: TAU
+					temp: TEMP
 				}), newshape=(-1,2))))
 
-				TAU *= 1.01
+				TEMP *= 1.01
 
 			precision, recall, f1, support = precision_recall_fscore_support(
 				np.argmax(test_labels, axis=1),
@@ -426,4 +426,4 @@ if __name__ == '__main__':
 		coord.request_stop()
 		coord.join(threads)
 
-print "Done!"
+	print "Done!"
