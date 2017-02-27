@@ -3,12 +3,6 @@ import pickle as pkl
 import tensorflow as tf
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
-
-### An alternative to top_down_net where batch normalization is always
-### performed using the mini-batch statistics.
-
-# Network is trained on crops only
-
 CRP_EPOCHS     = 50
 CRP_MINI_BATCH = 100
 
@@ -18,8 +12,6 @@ CHANNELS = 25
 MAX_CHAN = DEPTH*CHANNELS
 
 DATA_PATH                 = "/notebooks/Data/top_down_view"
-IMAGE_HEIGHT, IMAGE_WIDTH = 240, 320
-CROP_HEIGHT, CROP_WIDTH   = 60, 80
 
 def data_aug(images):
 	images = tf.map_fn(
@@ -79,13 +71,12 @@ def batch_norm(current):
 
 def graph():
 	'''
-	Build convolution-fractional max pooling portion of graph.
+	Build graph.
 	'''
-
-	labels      = tf.placeholder(dtype=tf.int32, shape=(None,))
-	images      = tf.placeholder(dtype=tf.float32, shape=(None, None, None, 3))
-	keep_prob   = tf.placeholder(dtype=tf.float32, shape=(DEPTH,))
-	augment     = tf.placeholder(dtype=tf.bool, name="augment")
+	row_images = tf.placeholder(tf.float32, shape=(None, 3072), name="row_images")
+	labels     = tf.placeholder(dtype=tf.int32, name="labels")
+	images     = tf.transpose(tf.reshape(row_images, (-1, 3, 32, 32)), perm=[0,2,3,1])
+	augment    = tf.placeholder(dtype=tf.bool, name="augment")
 
 	# Data Augmentation
 	current = tf.cond(augment, lambda: data_aug(images), lambda: images)
@@ -119,101 +110,80 @@ def graph():
 
 	train_step = tf.train.AdamOptimizer().minimize(loss, name="train_step")
 
-	return labels, images, keep_prob, augment, logits, prob, train_step
-
-
-def test():
-	'''
-	Test Graph.
-	'''
-
-	labels, images, keep_prob, augment, logits, prob, train_step = graph()
-
-	init_op = tf.global_variables_initializer()
-	sess.run(init_op)
-
-	labs = np.random.choice(range(1), size=100)
-	imgs = np.random.normal(size=(10,240,320,3))
-	# imgs = np.random.normal(size=(10,60,80,3))
-
-	print sess.run(logits, feed_dict={
-		labels: labs,
-		images: imgs,
-		keep_prob: [1., .9, .8, .7, .6, .5, .5, .5, .5],
-		augment: True
-		}).shape
-
-
+	return row_images, labels, augment, keep_prob, logits, prob, train_step
 
 if __name__ == '__main__':
 
-	with open("{0}/train.pkl".format(DATA_PATH), "rb") as f:
-		train_labels, train_crops = pkl.load(f)
+	try:
+		saver = tf.train.import_meta_graph("saved/fmp_net.meta")
+		saver.restore(sess, tf.train.latest_checkpoint("saved/"))
+		layers = tf.get_collection('layers')
 
-	with open("{0}/test.pkl".format(DATA_PATH), "rb") as f:
-		test_labels, test_crops = pkl.load(f)
+		print "Successfully loaded graph from file."
 
+	except IOError:
 
-	train_labels, train_crops = train_labels[:16300], train_crops[:16300]
-	test_labels, test_crops = test_labels[:4800], test_crops[:4800]
+		print "Building graph from scratch..."
 
-	N_train, N_test = len(train_labels), len(test_labels)
+		layers = graph()
+		for layer in layers:
+			tf.add_to_collection('layers', layer)
 
+		init_op    = tf.global_variables_initializer()
+		sess.run(init_op)
 
-	with tf.Session() as sess:
+	row_images, labels, augment, keep_prob, logits, prob, train_step = layers
 
-		try:
-			saver = tf.train.import_meta_graph("saved/top_down_net.meta")
-			saver.restore(sess, tf.train.latest_checkpoint("saved/"))
-			layers = tf.get_collection('layers')
+	with open("/notebooks/Data/cifar10/test_batch","rb") as f:
+		test_data = pkl.load(f)
 
-			print "Successfully loaded graph from file."
+	with open("/notebooks/Data/cifar10/test_batch","rb") as f:
+			test_data = pkl.load(f)
 
-		except IOError:
+		min_err = 0.07
+		for _ in range(EPOCHS):
 
-			print "Building graph from scratch..."
+			for i in range(1,6):
 
-			layers = graph()
-			for layer in layers:
-				tf.add_to_collection('layers', layer)
+				with open("/notebooks/Data/cifar10/data_batch_{0}".format(i),"rb") as f:
+					data = pkl.load(f)
 
-			init_op    = tf.global_variables_initializer()
-			sess.run(init_op)
+					N_train = len(data["labels"])
 
-		labels, images, keep_prob, augment, logits, prob, train_step = layers
+					for I in np.array_split(range(N_train),  100):
+						train_rows   = data["data"][I]
+						train_labels = np.array(data["labels"][I], dtype=int)
 
-		min_err = 0.05
-		for epoch in range(CRP_EPOCHS):
-			print "epoch: ", epoch+1
-			for __ in range(N_train/CRP_MINI_BATCH):
-
-				I = np.random.choice(range(N_train), size=100, replace=False)
-				sess.run(train_step, feed_dict={
-					labels: train_labels[I],
-					images: train_crops[I],
-					keep_prob: [1., .9, .8, .7, .6, .5, .5, .5, .5],
-					augment: True,
-				})
+						sess.run(train_step, feed_dict={
+							row_images: train_rows,
+							labels: train_labels,
+							augment: True,
+							keep_prob:  [1., .9, .8, .7, .6, .5, .5, .5, .5],
+						})
 
 			y_hat = np.empty(shape=(0,2))
-			for J in np.array_split(range(N_test),  16):
+			for J in np.array_split(range(N_test), 100):
+
+				test_rows  = test_data["data"][J]
+				test_labels = np.array(test_data["labels"][J], dtype=int)[J]
+
 				y_hat = np.concatenate((
 					y_hat, sess.run(prob, feed_dict={
-					labels: test_labels[J],
-					images: test_crops[J],
+					row_images: test_rows,
+					labels: test_labels,
 					keep_prob: [1. for i in range(DEPTH)],
 					augment: False,
 				})))
 
-			err = 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
+			err = 1-accuracy_score(test_data["labels"],np.argmax(y_hat,axis=1))
 			print "Crp Err: ", err
 			if err<min_err:
 				min_err=err
 				new_saver = tf.train.Saver(max_to_keep=2)
-				new_saver.save(sess, "saved/top_down_net")
+				new_saver.save(sess, "saved/fmp_net")
 
 				precision, recall, f1, support = precision_recall_fscore_support(
-					test_labels,
+					test_data["labels"],
 					np.argmax(y_hat,axis=1)
 					)
 
@@ -222,5 +192,3 @@ if __name__ == '__main__':
 				print "Crp Precision: ", precision
 				print "Crp Recall: ", recall
 				print "Crp F1 Score: ", f1
-
-	print "Done!"

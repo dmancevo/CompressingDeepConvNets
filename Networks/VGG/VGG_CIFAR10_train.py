@@ -74,86 +74,87 @@ def graph(VGG, N_FC):
 	
 	return row_images, labels, augment, keep_prob, logits, prob, loss, train_step
 
-with tf.Session() as sess:
+if __name__ == '__main__':
+	with tf.Session() as sess:
 
-	try:
-		saver = tf.train.import_meta_graph("saved/VGG-{0}_CIFAR10.meta".format(VGG))
-		saver.restore(sess, tf.train.latest_checkpoint('saved/'))
-		layers = tf.get_collection('layers')
+		try:
+			saver = tf.train.import_meta_graph("saved/VGG-{0}_CIFAR10.meta".format(VGG))
+			saver.restore(sess, tf.train.latest_checkpoint('saved/'))
+			layers = tf.get_collection('layers')
 
-		print "Successfully loaded graph from file."
+			print "Successfully loaded graph from file."
 
-	except IOError:
+		except IOError:
 
-		print "Building graph from scratch..."
+			print "Building graph from scratch..."
 
-		layers = graph(VGG, N_FC)
-		for layer in layers:
-			tf.add_to_collection('layers', layer)
+			layers = graph(VGG, N_FC)
+			for layer in layers:
+				tf.add_to_collection('layers', layer)
 
-		init_op    = tf.global_variables_initializer()
-		sess.run(init_op)
+			init_op    = tf.global_variables_initializer()
+			sess.run(init_op)
 
-	row_images, labels, augment, keep_prob, logits, prob, loss, train_step = layers
+		row_images, labels, augment, keep_prob, logits, prob, loss, train_step = layers
 
-	with open("/notebooks/Data/cifar10/test_batch","rb") as f:
-		test_data = pkl.load(f)
+		with open("/notebooks/Data/cifar10/test_batch","rb") as f:
+			test_data = pkl.load(f)
 
-	for _ in range(EPOCHS):
+		for _ in range(EPOCHS):
 
-		for i in range(1,6):
+			for i in range(1,6):
 
-			with open("/notebooks/Data/cifar10/data_batch_{0}".format(i),"rb") as f:
-				data = pkl.load(f)
+				with open("/notebooks/Data/cifar10/data_batch_{0}".format(i),"rb") as f:
+					data = pkl.load(f)
 
-			i,j = 0, BATCH_SIZE
-			while j<= len(data["data"]):
+				i,j = 0, BATCH_SIZE
+				while j<= len(data["data"]):
 
-				train_rows   = data["data"][i:j]
-				train_labels = np.array(data["labels"][i:j], dtype=int)
+					train_rows   = data["data"][i:j]
+					train_labels = np.array(data["labels"][i:j], dtype=int)
 
-				sess.run(train_step, feed_dict={
-					row_images: train_rows,
-					augment: True,
-					keep_prob:  0.5,
-					labels:     train_labels,
-					})
+					sess.run(train_step, feed_dict={
+						row_images: train_rows,
+						augment: True,
+						keep_prob:  0.5,
+						labels: train_labels,
+						})
 
-				train_score = sess.run(loss, feed_dict={
-					row_images: train_rows,
-					augment: False,
-					keep_prob: 1.0,
-					labels: train_labels,
-					})
+					train_score = sess.run(loss, feed_dict={
+						row_images: train_rows,
+						augment: False,
+						keep_prob: 1.0,
+						labels: train_labels,
+						})
 
-				test_rows   = test_data["data"][i:j]
-				test_labels = np.array(test_data["labels"][i:j], dtype=int)
+					test_rows   = test_data["data"][i:j]
+					test_labels = np.array(test_data["labels"][i:j], dtype=int)
 
-				test_score = sess.run(loss, feed_dict={
-					row_images: test_rows,
-					augment: False,
-					keep_prob: 1.0,
-					labels: test_labels,
-					})
+					test_score = sess.run(loss, feed_dict={
+						row_images: test_rows,
+						augment: False,
+						keep_prob: 1.0,
+						labels: test_labels,
+						})
 
-				print "train score:{0}, test score:{1}".format(train_score, test_score)
+					print "train score:{0}, test score:{1}".format(train_score, test_score)
 
-				i += BATCH_SIZE
-				j += BATCH_SIZE
+					i += BATCH_SIZE
+					j += BATCH_SIZE
 
 
-	J = np.random.choice(range(10000), size=1000, replace=False)
-	test_rows  = test_data["data"][J]
-	test_labels = np.array(test_data["labels"], dtype=int)[J]
+		J = np.random.choice(range(10000), size=1000, replace=False)
+		test_rows  = test_data["data"][J]
+		test_labels = np.array(test_data["labels"], dtype=int)[J]
 
-	y_hat = sess.run(prob, feed_dict={
-		row_images: test_rows,
-		augment: False,
-		keep_prob: 1.0,
-		})[:,0,0,:]
+		y_hat = sess.run(prob, feed_dict={
+			row_images: test_rows,
+			augment: False,
+			keep_prob: 1.0,
+			})[:,0,0,:]
 
-	new_saver = tf.train.Saver(max_to_keep=2)
-	new_saver.save(sess, "saved/VGG-{0}_CIFAR10".format(VGG))
+		new_saver = tf.train.Saver(max_to_keep=2)
+		new_saver.save(sess, "saved/VGG-{0}_CIFAR10".format(VGG))
 
-print "Err: {0}".format(1-accuracy_score(test_labels,np.argmax(y_hat,axis=1)))
-print "Done!"
+	print "Err: {0}".format(1-accuracy_score(test_labels,np.argmax(y_hat,axis=1)))
+	print "Done!"
