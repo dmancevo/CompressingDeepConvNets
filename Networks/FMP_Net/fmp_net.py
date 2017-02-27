@@ -3,15 +3,12 @@ import pickle as pkl
 import tensorflow as tf
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
-CRP_EPOCHS     = 50
-CRP_MINI_BATCH = 100
-
+EPOCHS   = 5
 FMP      = np.sqrt(2)
-DEPTH    = 9
-CHANNELS = 25
+DEPTH    = 6
+CHANNELS = 30
 MAX_CHAN = DEPTH*CHANNELS
-
-DATA_PATH                 = "/notebooks/Data/top_down_view"
+DATA_PATH= "/notebooks/Data/top_down_view"
 
 def data_aug(images):
 	images = tf.map_fn(
@@ -75,6 +72,7 @@ def graph():
 	'''
 	row_images = tf.placeholder(tf.float32, shape=(None, 3072), name="row_images")
 	labels     = tf.placeholder(dtype=tf.int32, name="labels")
+	keep_prob   = tf.placeholder(dtype=tf.float32, shape=(DEPTH,))
 	images     = tf.transpose(tf.reshape(row_images, (-1, 3, 32, 32)), perm=[0,2,3,1])
 	augment    = tf.placeholder(dtype=tf.bool, name="augment")
 
@@ -96,7 +94,7 @@ def graph():
 		current = batch_norm(current)
 		chan_in = i*CHANNELS
 
-	current = conv(current, 1, 2, MAX_CHAN, MAX_CHAN, padding="VALID")
+	current = conv(current, 2, 2, MAX_CHAN, MAX_CHAN, padding="VALID")
 	current = leaky_relu(current)
 	current = tf.nn.dropout(current, keep_prob[-1])
 	current = batch_norm(current)
@@ -114,31 +112,35 @@ def graph():
 
 if __name__ == '__main__':
 
-	try:
-		saver = tf.train.import_meta_graph("saved/fmp_net.meta")
-		saver.restore(sess, tf.train.latest_checkpoint("saved/"))
-		layers = tf.get_collection('layers')
+	with tf.Session() as sess:
 
-		print "Successfully loaded graph from file."
+		try:
+			saver = tf.train.import_meta_graph("saved/fmp_net.meta")
+			saver.restore(sess, tf.train.latest_checkpoint("saved/"))
+			layers = tf.get_collection('layers')
 
-	except IOError:
+			print "Successfully loaded graph from file."
 
-		print "Building graph from scratch..."
+		except IOError:
 
-		layers = graph()
-		for layer in layers:
-			tf.add_to_collection('layers', layer)
+			print "Building graph from scratch..."
 
-		init_op    = tf.global_variables_initializer()
-		sess.run(init_op)
+			layers = graph()
+			for layer in layers:
+				tf.add_to_collection('layers', layer)
 
-	row_images, labels, augment, keep_prob, logits, prob, train_step = layers
+			init_op    = tf.global_variables_initializer()
+			sess.run(init_op)
 
-	with open("/notebooks/Data/cifar10/test_batch","rb") as f:
-		test_data = pkl.load(f)
+		row_images, labels, augment, keep_prob, logits, prob, train_step = layers
 
-	with open("/notebooks/Data/cifar10/test_batch","rb") as f:
+		with open("/notebooks/Data/cifar10/test_batch","rb") as f:
 			test_data = pkl.load(f)
+
+		test_data["data"]   = np.array(test_data["data"])
+		test_data["labels"] = np.array(test_data["labels"], dtype=int)
+
+		N_test = len(test_data["labels"])
 
 		min_err = 0.07
 		for _ in range(EPOCHS):
@@ -146,26 +148,30 @@ if __name__ == '__main__':
 			for i in range(1,6):
 
 				with open("/notebooks/Data/cifar10/data_batch_{0}".format(i),"rb") as f:
-					data = pkl.load(f)
+					train_data = pkl.load(f)
 
-					N_train = len(data["labels"])
 
-					for I in np.array_split(range(N_train),  100):
-						train_rows   = data["data"][I]
-						train_labels = np.array(data["labels"][I], dtype=int)
+				train_data["data"]   = np.array(train_data["data"])
+				train_data["labels"] = np.array(train_data["labels"], dtype=int)
 
-						sess.run(train_step, feed_dict={
-							row_images: train_rows,
-							labels: train_labels,
-							augment: True,
-							keep_prob:  [1., .9, .8, .7, .6, .5, .5, .5, .5],
-						})
+				N_train = len(train_data["labels"])
+
+				for I in np.array_split(range(N_train),  100):
+					train_rows   = train_data["data"][I]
+					train_labels = train_data["labels"][I]
+
+					sess.run(train_step, feed_dict={
+						row_images: train_rows,
+						labels: train_labels,
+						augment: True,
+						keep_prob:  [1., .9, .8, .7, .6, .5],
+					})
 
 			y_hat = np.empty(shape=(0,2))
 			for J in np.array_split(range(N_test), 100):
 
-				test_rows  = test_data["data"][J]
-				test_labels = np.array(test_data["labels"][J], dtype=int)[J]
+				test_rows   = test_data["data"][J]
+				test_labels = test_data["labels"][J]
 
 				y_hat = np.concatenate((
 					y_hat, sess.run(prob, feed_dict={
@@ -173,10 +179,10 @@ if __name__ == '__main__':
 					labels: test_labels,
 					keep_prob: [1. for i in range(DEPTH)],
 					augment: False,
-				})))
+				})[:,[1,0]]))
 
 			err = 1-accuracy_score(test_data["labels"],np.argmax(y_hat,axis=1))
-			print "Crp Err: ", err
+			print "Err: ", err
 			if err<min_err:
 				min_err=err
 				new_saver = tf.train.Saver(max_to_keep=2)
@@ -189,6 +195,6 @@ if __name__ == '__main__':
 
 				precision, recall, f1 = precision[1], recall[1], f1[1]
 
-				print "Crp Precision: ", precision
-				print "Crp Recall: ", recall
-				print "Crp F1 Score: ", f1
+				print "Precision: ", precision
+				print "Recall: ", recall
+				print "F1 Score: ", f1
