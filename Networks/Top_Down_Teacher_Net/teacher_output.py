@@ -2,7 +2,6 @@ import numpy as np
 import pickle as pkl
 import tensorflow as tf
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
-from scipy.ndimage.filters import maximum_filter
 
 
 SAVE_OUTPUT = True
@@ -40,13 +39,14 @@ if __name__ == '__main__':
 		saver.restore(sess, tf.train.latest_checkpoint("saved/"))
 		layers = tf.get_collection('layers')
 
-		labels, images, keep_prob, augment, logits, prob, train_step = layers
+		labels, images, keep_prob, augment, c5, logits, prob, train_step = layers
 
 		for n in range(N_avg):
 
 			if SAVE_OUTPUT:
 
 				trn_temp  = np.empty(shape=(0,1,1,2))
+				trn_temp2 = np.empty(shape=(0,9,13,125))
 				for I in np.array_split(range(N_train),  163):
 
 					trn_temp = np.concatenate((
@@ -57,10 +57,20 @@ if __name__ == '__main__':
 						augment: False,
 					})))
 
+					trn_temp2 = np.concatenate((
+						trn_temp2, sess.run(c5, feed_dict={
+						labels: train_labels[I],
+						images: train_crops[I],
+						keep_prob: [1. for i in range(DEPTH)],
+						augment: False,
+					})))
+
 				if n == 0:
-					lgts = trn_temp
+					lgts   = trn_temp
+					c5_out = trn_temp2
 				else:
-					lgts = (n*lgts + trn_temp)/(n+1.)
+					lgts   = (n*lgts   + trn_temp)/(n+1.)
+					c5_out = (n*c5_out + trn_temp2)/(n+1.)
 
 			tst_temp = np.empty(shape=(0,2))
 			for J in np.array_split(range(N_test),  16):
@@ -98,4 +108,4 @@ if __name__ == '__main__':
 
 		if SAVE_OUTPUT:
 			with open(DATA_PATH+"/teacher_logits.pkl","wb") as f:
-				pkl.dump(lgts, f)
+				pkl.dump((lgts, c5_out), f)

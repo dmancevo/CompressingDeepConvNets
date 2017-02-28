@@ -105,6 +105,9 @@ def graph():
 		current = batch_norm(current)
 		chan_in = i*CHANNELS
 
+		if i==5:
+			c5 = current
+
 	current = conv(current, 1, 2, MAX_CHAN, MAX_CHAN, padding="VALID")
 	current = leaky_relu(current)
 	current = tf.nn.dropout(current, keep_prob[-1])
@@ -119,7 +122,7 @@ def graph():
 
 	train_step = tf.train.AdamOptimizer().minimize(loss, name="train_step")
 
-	return labels, images, keep_prob, augment, logits, prob, train_step
+	return labels, images, keep_prob, augment, c5, logits, prob, train_step
 
 
 def test():
@@ -180,7 +183,7 @@ if __name__ == '__main__':
 			init_op    = tf.global_variables_initializer()
 			sess.run(init_op)
 
-		labels, images, keep_prob, augment, logits, prob, train_step = layers
+		labels, images, keep_prob, augment, c5, logits, prob, train_step = layers
 
 		min_err = 0.05
 		for epoch in range(CRP_EPOCHS):

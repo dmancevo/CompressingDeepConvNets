@@ -27,6 +27,7 @@ class copyThread(threading.Thread):
 		self.I = I
 	def run(self):
 
+		ones, zeros = 0., 0.
 		for i in self.I:
 
 			path  = "/".join([PATH,labeled[i]])
@@ -36,12 +37,16 @@ class copyThread(threading.Thread):
 
 			coords = [coord[::-1] for coord in label["heads"] if is_valid_crop(coord)]
 
-			if coords:
+			if coords or zeros/(ones+zeros+.001) < .15:
 				img = imread("{0}.jpg".format(path))
 				if img.shape == (240, 320, 3):
 					file_name = labeled[i].split("/")[-1].strip()
 					meta[tt][file_name] = coords
 					imsave("./images/{0}/{1}.jpg".format(tt, file_name), img)
+
+					if coords: ones += 1.
+					else: zeros += 1.
+
 
 
 if __name__ == '__main__':

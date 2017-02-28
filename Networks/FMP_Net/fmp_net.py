@@ -1,12 +1,12 @@
 import numpy as np
 import pickle as pkl
 import tensorflow as tf
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+from sklearn.metrics import accuracy_score
 
-EPOCHS   = 5
-FMP      = np.sqrt(2)
-DEPTH    = 6
-CHANNELS = 30
+EPOCHS   = 50
+FMP      = np.power(2,1./3.)
+DEPTH    = 9
+CHANNELS = 5
 MAX_CHAN = DEPTH*CHANNELS
 DATA_PATH= "/notebooks/Data/top_down_view"
 
@@ -94,21 +94,25 @@ def graph():
 		current = batch_norm(current)
 		chan_in = i*CHANNELS
 
+		if i==4:
+			c4 = current
+
 	current = conv(current, 2, 2, MAX_CHAN, MAX_CHAN, padding="VALID")
 	current = leaky_relu(current)
 	current = tf.nn.dropout(current, keep_prob[-1])
 	current = batch_norm(current)
-	current = conv(current, 1, 1, MAX_CHAN, 2)
+	current = conv(current, 1, 1, MAX_CHAN, 10)
 
 	logits = current
-	f_log  = tf.reshape(logits, shape=(-1,2))
+	f_log  = tf.reshape(logits, shape=(-1,10))
 	prob   = tf.nn.softmax(f_log, name="prob")
 	loss   = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
 		 logits=f_log, labels=labels), name="loss")
 
 	train_step = tf.train.AdamOptimizer().minimize(loss, name="train_step")
 
-	return row_images, labels, augment, keep_prob, logits, prob, train_step
+	return row_images, labels, augment, keep_prob, c4, logits, prob, train_step
+
 
 if __name__ == '__main__':
 
@@ -132,7 +136,7 @@ if __name__ == '__main__':
 			init_op    = tf.global_variables_initializer()
 			sess.run(init_op)
 
-		row_images, labels, augment, keep_prob, logits, prob, train_step = layers
+		row_images, labels, augment, keep_prob, c4, logits, prob, train_step = layers
 
 		with open("/notebooks/Data/cifar10/test_batch","rb") as f:
 			test_data = pkl.load(f)
@@ -143,7 +147,7 @@ if __name__ == '__main__':
 		N_test = len(test_data["labels"])
 
 		min_err = 0.07
-		for _ in range(EPOCHS):
+		for epoch in range(EPOCHS):
 
 			for i in range(1,6):
 
@@ -164,10 +168,10 @@ if __name__ == '__main__':
 						row_images: train_rows,
 						labels: train_labels,
 						augment: True,
-						keep_prob:  [1., .9, .8, .7, .6, .5],
+						keep_prob:  [1., .9, .8, .7, .6, .5, .5, .5, .5],
 					})
 
-			y_hat = np.empty(shape=(0,2))
+			y_hat = np.empty(shape=(0,10))
 			for J in np.array_split(range(N_test), 100):
 
 				test_rows   = test_data["data"][J]
@@ -179,22 +183,13 @@ if __name__ == '__main__':
 					labels: test_labels,
 					keep_prob: [1. for i in range(DEPTH)],
 					augment: False,
-				})[:,[1,0]]))
+				})))
 
 			err = 1-accuracy_score(test_data["labels"],np.argmax(y_hat,axis=1))
+			print "epoch: ",epoch+1
 			print "Err: ", err
 			if err<min_err:
+				print "Saving..."
 				min_err=err
 				new_saver = tf.train.Saver(max_to_keep=2)
 				new_saver.save(sess, "saved/fmp_net")
-
-				precision, recall, f1, support = precision_recall_fscore_support(
-					test_data["labels"],
-					np.argmax(y_hat,axis=1)
-					)
-
-				precision, recall, f1 = precision[1], recall[1], f1[1]
-
-				print "Precision: ", precision
-				print "Recall: ", recall
-				print "F1 Score: ", f1
