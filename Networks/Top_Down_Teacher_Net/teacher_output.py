@@ -108,4 +108,7 @@ if __name__ == '__main__':
 
 		if SAVE_OUTPUT:
 			with open(DATA_PATH+"/teacher_logits.pkl","wb") as f:
-				pkl.dump((lgts, c5_out), f)
+				pkl.dump(lgts, f)
+
+			with open(DATA_PATH+"/teacher_c5.pkl","wb") as f:
+				pkl.dump(c5_out, f)

@@ -114,6 +114,9 @@ if __name__ == '__main__':
 			print "Crp F1 Score: ", f1
 
 	if SAVE_OUTPUT:
-		with open(DATA_PATH+"/fmp_logits.pkl","wb") as f:
-			pkl.dump((lgts, c4_out), f)
+		with open(DATA_PATH+"/teacher_logits.pkl","wb") as f:
+			pkl.dump(lgts, f)
+
+		with open(DATA_PATH+"/teacher_c5.pkl","wb") as f:
+			pkl.dump(c5_out, f)
 
