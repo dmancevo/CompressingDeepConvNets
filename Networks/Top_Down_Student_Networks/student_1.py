@@ -4,14 +4,14 @@ import tensorflow as tf
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
 # one of "baseline", "reg_logits" or "know_dist".
-MODE = "reg_logits"
+MODE = "know_dist"
 TEMP = 10. # Temperature while using knowledge distillation.
 BETA = 0.05 # Weight given to true labels while using knowledge distillation.
 
 if MODE=="baseline" or MODE=="reg_logits":
 	FOLDER = "saved/{0}/".format(MODE)
 elif MODE=="know_dist":
-	FOLDER = "saved/{0}_T{1}_beta{2}/".format(MODE,TEMP,BETA)
+	FOLDER = "saved/student_1/{0}_T{1}_beta{2}/".format(MODE,TEMP,BETA)
 
 DATA_PATH                 = "/notebooks/Data/top_down_view"
 CROP_HEIGHT, CROP_WIDTH   = 60, 80
