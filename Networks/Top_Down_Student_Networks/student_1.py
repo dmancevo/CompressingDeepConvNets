@@ -9,7 +9,7 @@ TEMP = 10. # Temperature while using knowledge distillation.
 BETA = 0.05 # Weight given to true labels while using knowledge distillation.
 
 if MODE=="baseline" or MODE=="reg_logits":
-	FOLDER = "saved/{0}/".format(MODE)
+	FOLDER = "saved/student_1/{0}/".format(MODE)
 elif MODE=="know_dist":
 	FOLDER = "saved/student_1/{0}_T{1}_beta{2}/".format(MODE,TEMP,BETA)
 
@@ -17,7 +17,7 @@ DATA_PATH                 = "/notebooks/Data/top_down_view"
 CROP_HEIGHT, CROP_WIDTH   = 60, 80
 IMAGE_HEIGHT, IMAGE_WIDTH = 240, 320
 
-EPOCHS     = 50
+EPOCHS     = 100
 MINI_BATCH = 100
 K, H       = 20, 50
 

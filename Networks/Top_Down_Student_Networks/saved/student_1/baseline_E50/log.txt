@@ -1,0 +1,109 @@
+epoch:  1
+Crp Err:  0.149375
+epoch:  2
+Crp Err:  0.154166666667
+epoch:  3
+Crp Err:  0.0789583333333
+Crp Precision:  0.92489626556
+Crp Recall:  0.918417799753
+Crp F1 Score:  0.921645648129
+epoch:  4
+Crp Err:  0.0802083333333
+epoch:  5
+Crp Err:  0.109375
+epoch:  6
+Crp Err:  0.088125
+epoch:  7
+Crp Err:  0.0877083333333
+epoch:  8
+Crp Err:  0.101666666667
+epoch:  9
+Crp Err:  0.11125
+epoch:  10
+Crp Err:  0.0808333333333
+epoch:  11
+Crp Err:  0.121458333333
+epoch:  12
+Crp Err:  0.086875
+epoch:  13
+Crp Err:  0.09
+epoch:  14
+Crp Err:  0.0691666666667
+Crp Precision:  0.951314088755
+Crp Recall:  0.909765142151
+Crp F1 Score:  0.930075821398
+epoch:  15
+Crp Err:  0.075625
+epoch:  16
+Crp Err:  0.07625
+epoch:  17
+Crp Err:  0.0583333333333
+Crp Precision:  0.937627395026
+Crp Recall:  0.947672023074
+Crp F1 Score:  0.94262295082
+epoch:  18
+Crp Err:  0.090625
+epoch:  19
+Crp Err:  0.103541666667
+epoch:  20
+Crp Err:  0.0858333333333
+epoch:  21
+Crp Err:  0.0764583333333
+epoch:  22
+Crp Err:  0.0910416666667
+epoch:  23
+Crp Err:  0.083125
+epoch:  24
+Crp Err:  0.0985416666667
+epoch:  25
+Crp Err:  0.078125
+epoch:  26
+Crp Err:  0.0929166666667
+epoch:  27
+Crp Err:  0.0770833333333
+epoch:  28
+Crp Err:  0.123958333333
+epoch:  29
+Crp Err:  0.0922916666667
+epoch:  30
+Crp Err:  0.0685416666667
+epoch:  31
+Crp Err:  0.0804166666667
+epoch:  32
+Crp Err:  0.0789583333333
+epoch:  33
+Crp Err:  0.104375
+epoch:  34
+Crp Err:  0.0741666666667
+epoch:  35
+Crp Err:  0.0941666666667
+epoch:  36
+Crp Err:  0.06375
+epoch:  37
+Crp Err:  0.110416666667
+epoch:  38
+Crp Err:  0.116666666667
+epoch:  39
+Crp Err:  0.079375
+epoch:  40
+Crp Err:  0.11125
+epoch:  41
+Crp Err:  0.0972916666667
+epoch:  42
+Crp Err:  0.080625
+epoch:  43
+Crp Err:  0.0958333333333
+epoch:  44
+Crp Err:  0.0835416666667
+epoch:  45
+Crp Err:  0.0820833333333
+epoch:  46
+Crp Err:  0.113125
+epoch:  47
+Crp Err:  0.10625
+epoch:  48
+Crp Err:  0.0897916666667
+epoch:  49
+Crp Err:  0.08875
+epoch:  50
+Crp Err:  0.0945833333333

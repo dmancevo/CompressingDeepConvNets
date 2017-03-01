@@ -1,0 +1,80 @@
+epoch:  1
+Crp Err:  0.105625
+epoch:  2
+Crp Err:  0.096875
+Crp Precision:  0.938729874776
+Crp Recall:  0.864853728883
+Crp F1 Score:  0.900278790478
+epoch:  3
+Crp Err:  0.0870833333333
+Crp Precision:  0.947040498442
+Crp Recall:  0.876802637
+Crp F1 Score:  0.910569105691
+epoch:  4
+Crp Err:  0.0766666666667
+Crp Precision:  0.958574610245
+Crp Recall:  0.886691388546
+Crp F1 Score:  0.921232876712
+epoch:  5
+Crp Err:  0.0995833333333
+epoch:  6
+Crp Err:  0.107708333333
+epoch:  7
+Crp Err:  0.094375
+epoch:  8
+Crp Err:  0.0747916666667
+Crp Precision:  0.933361274099
+Crp Recall:  0.917593737124
+Crp F1 Score:  0.925410346977
+epoch:  9
+Crp Err:  0.1
+epoch:  10
+Crp Err:  0.0677083333333
+Crp Precision:  0.944585448393
+Crp Recall:  0.92006592501
+Crp F1 Score:  0.932164475057
+epoch:  11
+Crp Err:  0.0854166666667
+epoch:  12
+Crp Err:  0.090625
+epoch:  13
+Crp Err:  0.0670833333333
+Crp Precision:  0.950749464668
+Crp Recall:  0.914709517923
+Crp F1 Score:  0.932381352373
+epoch:  14
+Crp Err:  0.0766666666667
+epoch:  15
+Crp Err:  0.065
+Crp Precision:  0.942283563363
+Crp Recall:  0.928306551298
+Crp F1 Score:  0.935242839352
+epoch:  16
+Crp Err:  0.068125
+epoch:  17
+Crp Err:  0.0704166666667
+epoch:  18
+Crp Err:  0.0654166666667
+epoch:  19
+Crp Err:  0.061875
+Crp Precision:  0.959447799827
+Crp Recall:  0.916357643181
+Crp F1 Score:  0.937407797682
+epoch:  20
+Crp Err:  0.0677083333333
+epoch:  21
+Crp Err:  0.0677083333333
+epoch:  22
+Crp Err:  0.055
+Crp Precision:  0.944878650761
+Crp Recall:  0.946435929131
+Crp F1 Score:  0.945656648827
+epoch:  23
+Crp Err:  0.065625
+epoch:  24
+Crp Err:  0.0497916666667
+Crp Precision:  0.955833333333
+Crp Recall:  0.945199835187
+Crp F1 Score:  0.950486844831
+epoch:  25
+Crp Err:  0.058125
