@@ -4,20 +4,20 @@ import tensorflow as tf
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
 # one of "baseline", "reg_logits" or "know_dist".
-MODE = "baseline"
-T    = 10 # Temperature while using knowledge distillation.
+MODE = "reg_logits"
+TEMP = 10. # Temperature while using knowledge distillation.
 BETA = 0.05 # Weight given to true labels while using knowledge distillation.
 
 if MODE=="baseline" or MODE=="reg_logits":
 	FOLDER = "saved/{0}/".format(MODE)
-else:
-	FOLDER = "saved/{0}_T{1}_beta{3}/".format(MODE,T,BETA)
+elif MODE=="know_dist":
+	FOLDER = "saved/{0}_T{1}_beta{2}/".format(MODE,TEMP,BETA)
 
 DATA_PATH                 = "/notebooks/Data/top_down_view"
 CROP_HEIGHT, CROP_WIDTH   = 60, 80
 IMAGE_HEIGHT, IMAGE_WIDTH = 240, 320
 
-EPOCHS     = 10
+EPOCHS     = 50
 MINI_BATCH = 100
 K, H       = 20, 50
 
@@ -181,7 +181,13 @@ if __name__ == '__main__':
 
 			print "Building graph from scratch..."
 
-			layers = baseline()
+			if MODE=="baseline":
+				layers = baseline()
+			elif MODE=="reg_logits":
+				layers = regression_on_logits()
+			elif MODE=="know_dist":
+				layers = knowledge_distillation(TEMP, BETA)
+
 			for layer in layers:
 				tf.add_to_collection('layers', layer)
 
@@ -193,7 +199,7 @@ if __name__ == '__main__':
 
 		bn_update = tf.group(*tf.get_collection(tf.GraphKeys.UPDATE_OPS))
 
-		min_err = 0.11
+		min_err = 0.08
 		for epoch in range(EPOCHS):
 			print "epoch: ", epoch+1
 			for __ in range(N_train/MINI_BATCH):
@@ -201,7 +207,7 @@ if __name__ == '__main__':
 				I = np.random.choice(range(N_train), size=100, replace=False)
 				sess.run([train_step, bn_update], feed_dict={
 					labels: train_labels[I],
-					t_logits: teacher_logits[I]
+					t_logits: teacher_logits[I],
 					images: train_crops[I],
 					keep_prob: .5,
 					augment: True,
@@ -216,7 +222,7 @@ if __name__ == '__main__':
 					images: test_crops[J],
 					keep_prob: 1.,
 					augment: False,
-					training: True
+					training: False
 				})))
 
 
