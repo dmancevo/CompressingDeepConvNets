@@ -7,15 +7,14 @@ from load import load
 
 VGG        = 16
 N_FC       = 1024 # Fully Connected Layers
-EPOCHS     = 25
-BATCH_SIZE = 100
+EPOCHS     = 75
 
 def batch_norm(layer, dim):
 	'''
 	Batch normalization.
 	'''
 	b_mean, b_var = tf.nn.moments(layer,[0])
-	scale         = tf.Variable(tf.ones([dim]))
+	scale = tf.Variable(tf.ones([dim]))
 	beta          = tf.Variable(tf.zeros([dim]))
 	current       = tf.nn.batch_normalization(
 		x                = layer,
@@ -30,6 +29,8 @@ def batch_norm(layer, dim):
 def data_aug(images):
 	images = tf.map_fn(
 		lambda img: tf.image.random_flip_left_right(img), images)
+	images = tf.map_fn(
+		lambda img: tf.image.random_flip_up_down(img), images)
 	images = tf.map_fn(
 		lambda img: tf.image.random_brightness(img, max_delta=63), images)
 	images = tf.map_fn(
@@ -49,7 +50,6 @@ def graph(VGG, N_FC):
 	# Data Augmentation
 	augment = tf.placeholder(tf.bool, name="augment")
 	images = tf.cond(augment, lambda: data_aug(images), lambda: images)
-
 
 	# Convolution
 	pool5      = load(VGG, images, layer="pool5")
@@ -72,7 +72,7 @@ def graph(VGG, N_FC):
 		logits=logits, labels=labels), name="loss")
 	train_step = tf.train.AdamOptimizer().minimize(loss, name="train_step")
 	
-	return row_images, labels, augment, keep_prob, logits, prob, loss, train_step
+	return row_images, labels, augment, keep_prob, logits, prob, train_step
 
 if __name__ == '__main__':
 	with tf.Session() as sess:
@@ -95,66 +95,52 @@ if __name__ == '__main__':
 			init_op    = tf.global_variables_initializer()
 			sess.run(init_op)
 
-		row_images, labels, augment, keep_prob, logits, prob, loss, train_step = layers
+		row_images, labels, augment, keep_prob, logits, prob, train_step = layers
 
 		with open("/notebooks/Data/cifar10/test_batch","rb") as f:
 			test_data = pkl.load(f)
 
-		for _ in range(EPOCHS):
+		test_data["data"]   = np.array(test_data["data"])
+		test_data["labels"] = np.array(test_data["labels"], dtype=int)
 
+		min_err = 0.16
+		for epoch in range(EPOCHS):
+			print"epoch: ", epoch+1
 			for i in range(1,6):
 
 				with open("/notebooks/Data/cifar10/data_batch_{0}".format(i),"rb") as f:
 					data = pkl.load(f)
 
-				i,j = 0, BATCH_SIZE
-				while j<= len(data["data"]):
+				data["data"]   = np.array(data["data"])
+				data["labels"] = np.array(data["labels"], dtype=int)
 
-					train_rows   = data["data"][i:j]
-					train_labels = np.array(data["labels"][i:j], dtype=int)
-
+				for I in np.array_split(range(10000), 100):
 					sess.run(train_step, feed_dict={
-						row_images: train_rows,
+						row_images: data["data"][I],
+						labels: data["labels"][I],
 						augment: True,
-						keep_prob:  0.5,
-						labels: train_labels,
+						keep_prob: 0.5,
 						})
 
-					train_score = sess.run(loss, feed_dict={
-						row_images: train_rows,
-						augment: False,
-						keep_prob: 1.0,
-						labels: train_labels,
-						})
+			y_hat = np.empty(shape=(0,10))
+			for J in np.array_split(range(10000), 100):
+				y_hat = np.concatenate((
+					y_hat, sess.run(prob, feed_dict={
+					row_images: test_data["data"][J],
+					augment: False,
+					keep_prob: 1.0,
+					})[:,0,0,:]
+				))
 
-					test_rows   = test_data["data"][i:j]
-					test_labels = np.array(test_data["labels"][i:j], dtype=int)
+			test_labels = np.array(test_data["labels"])
 
-					test_score = sess.run(loss, feed_dict={
-						row_images: test_rows,
-						augment: False,
-						keep_prob: 1.0,
-						labels: test_labels,
-						})
-
-					print "train score:{0}, test score:{1}".format(train_score, test_score)
-
-					i += BATCH_SIZE
-					j += BATCH_SIZE
+			err = 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
+			print "Err: ", err
+			if err<min_err:
+				print "Saving..."
+				min_err=err
+				new_saver = tf.train.Saver(max_to_keep=2)
+				new_saver.save(sess, "saved/VGG-{0}_CIFAR10".format(VGG))
 
 
-		J = np.random.choice(range(10000), size=1000, replace=False)
-		test_rows  = test_data["data"][J]
-		test_labels = np.array(test_data["labels"], dtype=int)[J]
-
-		y_hat = sess.run(prob, feed_dict={
-			row_images: test_rows,
-			augment: False,
-			keep_prob: 1.0,
-			})[:,0,0,:]
-
-		new_saver = tf.train.Saver(max_to_keep=2)
-		new_saver.save(sess, "saved/VGG-{0}_CIFAR10".format(VGG))
-
-	print "Err: {0}".format(1-accuracy_score(test_labels,np.argmax(y_hat,axis=1)))
 	print "Done!"

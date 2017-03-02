@@ -6,9 +6,12 @@ from sklearn.metrics import accuracy_score
 EPOCHS   = 50
 FMP      = np.power(2,1./3.)
 DEPTH    = 9
-CHANNELS = 5
+CHANNELS = 50
 MAX_CHAN = DEPTH*CHANNELS
 DATA_PATH= "/notebooks/Data/top_down_view"
+
+TEMP = 30.
+BETA = .15
 
 def data_aug(images):
 	images = tf.map_fn(
@@ -51,7 +54,7 @@ def batch_norm(current):
 	Batch Normalization performed exclusively using mini-batch statistics.
 	'''
 	beta = tf.Variable(
-		np.random.normal(0,0.01, current.get_shape()[-1]),
+		tf.zeros(current.get_shape()[-1]),
 		dtype=tf.float32
 	)
 	bn_mean, bn_var = tf.nn.moments(current, axes=[0,1,2])
@@ -72,7 +75,8 @@ def graph():
 	'''
 	row_images = tf.placeholder(tf.float32, shape=(None, 3072), name="row_images")
 	labels     = tf.placeholder(dtype=tf.int32, name="labels")
-	keep_prob   = tf.placeholder(dtype=tf.float32, shape=(DEPTH,))
+	t_logits   = tf.placeholder(dtype=tf.float32, shape=(None, 10))
+	keep_prob  = tf.placeholder(dtype=tf.float32, shape=(DEPTH,))
 	images     = tf.transpose(tf.reshape(row_images, (-1, 3, 32, 32)), perm=[0,2,3,1])
 	augment    = tf.placeholder(dtype=tf.bool, name="augment")
 
@@ -103,15 +107,22 @@ def graph():
 	current = batch_norm(current)
 	current = conv(current, 1, 1, MAX_CHAN, 10)
 
-	logits = current
-	f_log  = tf.reshape(logits, shape=(-1,10))
-	prob   = tf.nn.softmax(f_log, name="prob")
+	logits = current[:,0,0,:]
+	prob   = tf.nn.softmax(logits, name="prob")
+
 	loss   = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-		 logits=f_log, labels=labels), name="loss")
+		logits=f_log, labels=labels))
 
-	train_step = tf.train.AdamOptimizer().minimize(loss, name="train_step")
+	train_step = tf.train.AdamOptimizer().minimize(loss)
 
-	return row_images, labels, augment, keep_prob, c4, logits, prob, train_step
+	kd_loss = BETA*loss+(1.-BETA)*tf.pow(TEMP,2.)\
+	tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
+		logits=TEMP*f_log, labels=tf.softmax(TEMP*t_logits)))
+
+	kd_train_step = tf.train.AdamOptimizer().minimize(kd_loss)
+
+	return row_images, labels, t_logits augment, keep_prob, c4, logits, prob,
+	kd_train_step, train_step
 
 
 if __name__ == '__main__':
@@ -136,7 +147,8 @@ if __name__ == '__main__':
 			init_op    = tf.global_variables_initializer()
 			sess.run(init_op)
 
-		row_images, labels, augment, keep_prob, c4, logits, prob, train_step = layers
+		row_images, labels, t_logits augment, keep_prob, c4, logits, prob\
+		kd_train_step, train_step = layers
 
 		with open("/notebooks/Data/cifar10/test_batch","rb") as f:
 			test_data = pkl.load(f)
@@ -146,7 +158,10 @@ if __name__ == '__main__':
 
 		N_test = len(test_data["labels"])
 
-		min_err = 0.07
+		with open("/notebooks/Data/cifar10/vgg16_cifar10_logits.pkl", "rb") as f:
+			vgg16_logits = pkl.load(f)
+
+		min_err = 0.15
 		for epoch in range(EPOCHS):
 
 			for i in range(1,6):
@@ -161,15 +176,22 @@ if __name__ == '__main__':
 				N_train = len(train_data["labels"])
 
 				for I in np.array_split(range(N_train),  100):
-					train_rows   = train_data["data"][I]
-					train_labels = train_data["labels"][I]
 
-					sess.run(train_step, feed_dict={
-						row_images: train_rows,
-						labels: train_labels,
-						augment: True,
-						keep_prob:  [1., .9, .8, .7, .6, .5, .5, .5, .5],
-					})
+					if min_err<.15:
+						sess.run(train_step, feed_dict={
+							row_images: train_data["data"][I],
+							labels: train_data["labels"][I],
+							augment: True,
+							keep_prob:  [1., .9, .8, .7, .6, .5, .5, .5, .5],
+						})
+					else:
+						sess.run(kd_train_step, feed_dict={
+							row_images: train_data["data"][I],
+							labels: train_data["labels"][I],
+							t_logits: vgg16_logits[I]
+							augment: True,
+							keep_prob:  [1., .9, .8, .7, .6, .5, .5, .5, .5],
+						})
 
 			y_hat = np.empty(shape=(0,10))
 			for J in np.array_split(range(N_test), 100):
