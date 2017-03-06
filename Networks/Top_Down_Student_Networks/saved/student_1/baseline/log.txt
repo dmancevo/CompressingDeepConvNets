@@ -1,0 +1,206 @@
+epoch:  1
+Crp Err:  0.31
+epoch:  2
+Crp Err:  0.128125
+epoch:  3
+Crp Err:  0.0858333333333
+epoch:  4
+Crp Err:  0.0902083333333
+epoch:  5
+Crp Err:  0.0954166666667
+epoch:  6
+Crp Err:  0.0764583333333
+Crp Precision:  0.928809325562
+Crp Recall:  0.919241862382
+Crp F1 Score:  0.924000828329
+epoch:  7
+Crp Err:  0.0877083333333
+epoch:  8
+Crp Err:  0.084375
+epoch:  9
+Crp Err:  0.101458333333
+epoch:  10
+Crp Err:  0.0916666666667
+epoch:  11
+Crp Err:  0.095
+epoch:  12
+Crp Err:  0.1025
+epoch:  13
+Crp Err:  0.0977083333333
+epoch:  14
+Crp Err:  0.0985416666667
+epoch:  15
+Crp Err:  0.0808333333333
+epoch:  16
+Crp Err:  0.0789583333333
+epoch:  17
+Crp Err:  0.104791666667
+epoch:  18
+Crp Err:  0.089375
+epoch:  19
+Crp Err:  0.0925
+epoch:  20
+Crp Err:  0.0627083333333
+Crp Precision:  0.947390572391
+Crp Recall:  0.927482488669
+Crp F1 Score:  0.937330834895
+epoch:  21
+Crp Err:  0.0883333333333
+epoch:  22
+Crp Err:  0.101041666667
+epoch:  23
+Crp Err:  0.0722916666667
+epoch:  24
+Crp Err:  0.112916666667
+epoch:  25
+Crp Err:  0.100208333333
+epoch:  26
+Crp Err:  0.0833333333333
+epoch:  27
+Crp Err:  0.104791666667
+epoch:  28
+Crp Err:  0.063125
+epoch:  29
+Crp Err:  0.0747916666667
+epoch:  30
+Crp Err:  0.0716666666667
+epoch:  31
+Crp Err:  0.0889583333333
+epoch:  32
+Crp Err:  0.115833333333
+epoch:  33
+Crp Err:  0.114375
+epoch:  34
+Crp Err:  0.08
+epoch:  35
+Crp Err:  0.104583333333
+epoch:  36
+Crp Err:  0.1125
+epoch:  37
+Crp Err:  0.141458333333
+epoch:  38
+Crp Err:  0.0910416666667
+epoch:  39
+Crp Err:  0.0935416666667
+epoch:  40
+Crp Err:  0.102083333333
+epoch:  41
+Crp Err:  0.0875
+epoch:  42
+Crp Err:  0.0945833333333
+epoch:  43
+Crp Err:  0.0910416666667
+epoch:  44
+Crp Err:  0.0825
+epoch:  45
+Crp Err:  0.090625
+epoch:  46
+Crp Err:  0.0670833333333
+epoch:  47
+Crp Err:  0.0670833333333
+epoch:  48
+Crp Err:  0.074375
+epoch:  49
+Crp Err:  0.0716666666667
+epoch:  50
+Crp Err:  0.0879166666667
+epoch:  51
+Crp Err:  0.0704166666667
+epoch:  52
+Crp Err:  0.125625
+epoch:  53
+Crp Err:  0.08375
+epoch:  54
+Crp Err:  0.0766666666667
+epoch:  55
+Crp Err:  0.090625
+epoch:  56
+Crp Err:  0.08875
+epoch:  57
+Crp Err:  0.0891666666667
+epoch:  58
+Crp Err:  0.0891666666667
+epoch:  59
+Crp Err:  0.086875
+epoch:  60
+Crp Err:  0.11125
+epoch:  61
+Crp Err:  0.110208333333
+epoch:  62
+Crp Err:  0.0866666666667
+epoch:  63
+Crp Err:  0.110208333333
+epoch:  64
+Crp Err:  0.0989583333333
+epoch:  65
+Crp Err:  0.0870833333333
+epoch:  66
+Crp Err:  0.0864583333333
+epoch:  67
+Crp Err:  0.0916666666667
+epoch:  68
+Crp Err:  0.094375
+epoch:  69
+Crp Err:  0.09625
+epoch:  70
+Crp Err:  0.080625
+epoch:  71
+Crp Err:  0.0875
+epoch:  72
+Crp Err:  0.0935416666667
+epoch:  73
+Crp Err:  0.0695833333333
+epoch:  74
+Crp Err:  0.0770833333333
+epoch:  75
+Crp Err:  0.07375
+epoch:  76
+Crp Err:  0.109791666667
+epoch:  77
+Crp Err:  0.07875
+epoch:  78
+Crp Err:  0.081875
+epoch:  79
+Crp Err:  0.07375
+epoch:  80
+Crp Err:  0.115416666667
+epoch:  81
+Crp Err:  0.0947916666667
+epoch:  82
+Crp Err:  0.07125
+epoch:  83
+Crp Err:  0.0935416666667
+epoch:  84
+Crp Err:  0.12125
+epoch:  85
+Crp Err:  0.07
+epoch:  86
+Crp Err:  0.0691666666667
+epoch:  87
+Crp Err:  0.0795833333333
+epoch:  88
+Crp Err:  0.08375
+epoch:  89
+Crp Err:  0.109791666667
+epoch:  90
+Crp Err:  0.0922916666667
+epoch:  91
+Crp Err:  0.100625
+epoch:  92
+Crp Err:  0.0839583333333
+epoch:  93
+Crp Err:  0.0920833333333
+epoch:  94
+Crp Err:  0.108125
+epoch:  95
+Crp Err:  0.11875
+epoch:  96
+Crp Err:  0.0764583333333
+epoch:  97
+Crp Err:  0.0722916666667
+epoch:  98
+Crp Err:  0.105
+epoch:  99
+Crp Err:  0.096875
+epoch:  100
+Crp Err:  0.09625

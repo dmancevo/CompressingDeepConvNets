@@ -1,0 +1,222 @@
+epoch:  1
+Err:  0.5252
+epoch:  2
+Err:  0.4826
+epoch:  3
+Err:  0.4645
+epoch:  4
+Err:  0.4565
+epoch:  5
+Err:  0.444
+epoch:  6
+Err:  0.4408
+epoch:  7
+Err:  0.4366
+epoch:  8
+Err:  0.4295
+epoch:  9
+Err:  0.4306
+epoch:  10
+Err:  0.4263
+epoch:  11
+Err:  0.4215
+epoch:  12
+Err:  0.4098
+epoch:  13
+Err:  0.4063
+epoch:  14
+Err:  0.4003
+epoch:  15
+Err:  0.3958
+epoch:  16
+Err:  0.3966
+epoch:  17
+Err:  0.3997
+epoch:  18
+Err:  0.389
+epoch:  19
+Err:  0.388
+epoch:  20
+Err:  0.3847
+epoch:  21
+Err:  0.3846
+epoch:  22
+Err:  0.378
+epoch:  23
+Err:  0.3771
+epoch:  24
+Err:  0.3729
+epoch:  25
+Err:  0.3676
+epoch:  26
+Err:  0.3673
+epoch:  27
+Err:  0.366
+epoch:  28
+Err:  0.355
+epoch:  29
+Err:  0.3618
+epoch:  30
+Err:  0.3593
+epoch:  31
+Err:  0.3503
+epoch:  32
+Err:  0.3529
+epoch:  33
+Err:  0.3489
+Saving...
+epoch:  34
+Err:  0.3515
+epoch:  35
+Err:  0.3474
+Saving...
+epoch:  36
+Err:  0.3469
+Saving...
+epoch:  37
+Err:  0.3466
+Saving...
+epoch:  38
+Err:  0.3468
+epoch:  39
+Err:  0.3432
+Saving...
+epoch:  40
+Err:  0.3467
+epoch:  41
+Err:  0.3441
+epoch:  42
+Err:  0.3411
+Saving...
+epoch:  43
+Err:  0.3461
+epoch:  44
+Err:  0.3448
+epoch:  45
+Err:  0.3424
+epoch:  46
+Err:  0.3399
+Saving...
+epoch:  47
+Err:  0.3378
+Saving...
+epoch:  48
+Err:  0.3416
+epoch:  49
+Err:  0.3416
+epoch:  50
+Err:  0.3435
+epoch:  51
+Err:  0.3381
+epoch:  52
+Err:  0.3371
+Saving...
+epoch:  53
+Err:  0.3355
+Saving...
+epoch:  54
+Err:  0.3413
+epoch:  55
+Err:  0.337
+epoch:  56
+Err:  0.3379
+epoch:  57
+Err:  0.34
+epoch:  58
+Err:  0.3374
+epoch:  59
+Err:  0.3357
+epoch:  60
+Err:  0.3313
+Saving...
+epoch:  61
+Err:  0.3387
+epoch:  62
+Err:  0.338
+epoch:  63
+Err:  0.335
+epoch:  64
+Err:  0.3354
+epoch:  65
+Err:  0.3367
+epoch:  66
+Err:  0.3382
+epoch:  67
+Err:  0.331
+Saving...
+epoch:  68
+Err:  0.3301
+Saving...
+epoch:  69
+Err:  0.3363
+epoch:  70
+Err:  0.3296
+Saving...
+epoch:  71
+Err:  0.3295
+Saving...
+epoch:  72
+Err:  0.3344
+epoch:  73
+Err:  0.3308
+epoch:  74
+Err:  0.3287
+Saving...
+epoch:  75
+Err:  0.3304
+epoch:  76
+Err:  0.3314
+epoch:  77
+Err:  0.331
+epoch:  78
+Err:  0.3285
+Saving...
+epoch:  79
+Err:  0.3272
+Saving...
+epoch:  80
+Err:  0.3285
+epoch:  81
+Err:  0.3288
+epoch:  82
+Err:  0.3323
+epoch:  83
+Err:  0.3301
+epoch:  84
+Err:  0.3322
+epoch:  85
+Err:  0.3266
+Saving...
+epoch:  86
+Err:  0.3292
+epoch:  87
+Err:  0.332
+epoch:  88
+Err:  0.3263
+Saving...
+epoch:  89
+Err:  0.3281
+epoch:  90
+Err:  0.3312
+epoch:  91
+Err:  0.3336
+epoch:  92
+Err:  0.3263
+epoch:  93
+Err:  0.3287
+epoch:  94
+Err:  0.3265
+epoch:  95
+Err:  0.3245
+Saving...
+epoch:  96
+Err:  0.325
+epoch:  97
+Err:  0.3268
+epoch:  98
+Err:  0.3293
+epoch:  99
+Err:  0.3243
+Saving...
+epoch:  100
+Err:  0.3301

@@ -4,7 +4,7 @@ import tensorflow as tf
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
 # one of "baseline", "reg_logits" or "know_dist".
-MODE = "know_dist"
+MODE = "reg_logits"
 TEMP = 10. # Temperature while using knowledge distillation.
 BETA = 0.05 # Weight given to true labels while using knowledge distillation.
 
@@ -208,7 +208,6 @@ if __name__ == '__main__':
 
 		min_err = 0.08
 		for epoch in range(EPOCHS):
-			print "epoch: ", epoch+1
 			for __ in range(N_train/MINI_BATCH):
 
 				I = np.random.choice(range(N_train), size=100, replace=False)
@@ -234,6 +233,7 @@ if __name__ == '__main__':
 
 
 			err = 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
+			print "epoch: ", epoch+1
 			print "Crp Err: ", err
 			if err<min_err:
 				min_err=err
