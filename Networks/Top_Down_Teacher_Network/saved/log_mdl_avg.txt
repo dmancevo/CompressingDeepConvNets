@@ -1,0 +1,40 @@
+Tests:  0
+Crp Err:  0.0508333333333
+Crp Precision:  0.940298507463
+Crp Recall:  0.96044499382
+Crp F1 Score:  0.950264981655
+Tests:  1
+Crp Err:  0.045625
+Crp Precision:  0.943729903537
+Crp Recall:  0.967449526164
+Crp F1 Score:  0.955442522889
+Tests:  2
+Crp Err:  0.0454166666667
+Crp Precision:  0.942330796956
+Crp Recall:  0.969509682736
+Crp F1 Score:  0.955727051178
+Tests:  3
+Crp Err:  0.04625
+Crp Precision:  0.942238267148
+Crp Recall:  0.967861557478
+Crp F1 Score:  0.95487804878
+Tests:  4
+Crp Err:  0.0441666666667
+Crp Precision:  0.944957814383
+Crp Recall:  0.969097651422
+Crp F1 Score:  0.956875508544
+Tests:  5
+Crp Err:  0.041875
+Crp Precision:  0.946271050521
+Crp Recall:  0.972393901937
+Crp F1 Score:  0.959154643365
+Tests:  6
+Crp Err:  0.0439583333333
+Crp Precision:  0.94249201278
+Crp Recall:  0.972393901937
+Crp F1 Score:  0.957209490975
+Tests:  7
+Crp Err:  0.0422916666667
+Crp Precision:  0.9451561249
+Crp Recall:  0.972805933251
+Crp F1 Score:  0.958781725888

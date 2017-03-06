@@ -1,0 +1,12 @@
+Data/top_down_view/config.py
+
+*.pyc
+*.pkl
+*.data*
+*.meta
+*.index
+*checkpoint
+*.mat
+*.html
+*.jpg
+Data/cifar10/*
