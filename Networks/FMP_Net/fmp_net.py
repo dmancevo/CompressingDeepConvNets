@@ -6,11 +6,11 @@ from sklearn.metrics import accuracy_score
 EPOCHS   = 50
 FMP      = np.power(2,1./3.)
 DEPTH    = 9
-CHANNELS = 50
+CHANNELS = 30
 MAX_CHAN = DEPTH*CHANNELS
 DATA_PATH= "/notebooks/Data/top_down_view"
 
-TEMP = 30.
+TEMP = 100.
 BETA = .15
 
 def data_aug(images):
@@ -111,17 +111,17 @@ def graph():
 	prob   = tf.nn.softmax(logits, name="prob")
 
 	loss   = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-		logits=f_log, labels=labels))
+		logits=logits, labels=labels))
 
 	train_step = tf.train.AdamOptimizer().minimize(loss)
 
-	kd_loss = BETA*loss+(1.-BETA)*tf.pow(TEMP,2.)\
+	kd_loss = BETA*loss+(1.-BETA)*tf.pow(TEMP,2.)*\
 	tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-		logits=TEMP*f_log, labels=tf.softmax(TEMP*t_logits)))
+		logits=TEMP*logits, labels=tf.nn.softmax(TEMP*t_logits)))
 
 	kd_train_step = tf.train.AdamOptimizer().minimize(kd_loss)
 
-	return row_images, labels, t_logits augment, keep_prob, c4, logits, prob,
+	return row_images, labels, t_logits, augment, keep_prob, c4, logits, prob,\
 	kd_train_step, train_step
 
 
@@ -147,7 +147,7 @@ if __name__ == '__main__':
 			init_op    = tf.global_variables_initializer()
 			sess.run(init_op)
 
-		row_images, labels, t_logits augment, keep_prob, c4, logits, prob\
+		row_images, labels, t_logits, augment, keep_prob, c4, logits, prob,\
 		kd_train_step, train_step = layers
 
 		with open("/notebooks/Data/cifar10/test_batch","rb") as f:
@@ -158,7 +158,7 @@ if __name__ == '__main__':
 
 		N_test = len(test_data["labels"])
 
-		with open("/notebooks/Data/cifar10/vgg16_cifar10_logits.pkl", "rb") as f:
+		with open("/notebooks/Data/cifar10/vgg16_logits.pkl", "rb") as f:
 			vgg16_logits = pkl.load(f)
 
 		min_err = 0.15
@@ -188,7 +188,7 @@ if __name__ == '__main__':
 						sess.run(kd_train_step, feed_dict={
 							row_images: train_data["data"][I],
 							labels: train_data["labels"][I],
-							t_logits: vgg16_logits[I]
+							t_logits: vgg16_logits[I],
 							augment: True,
 							keep_prob:  [1., .9, .8, .7, .6, .5, .5, .5, .5],
 						})

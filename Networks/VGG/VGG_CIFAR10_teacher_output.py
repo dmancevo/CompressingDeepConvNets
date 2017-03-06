@@ -1,9 +1,9 @@
 import numpy as np
 import pickle as pkl
 import tensorflow as tf
+from sklearn.metrics import accuracy_score
 
-VGG     = 16
-batches = ["data_batch_{0}".format(i) for i in range(1,6)]
+VGG = 16
 
 with tf.Session() as sess:
 
@@ -13,11 +13,10 @@ with tf.Session() as sess:
 
 	print "Successfully loaded graph from file."
 
-	row_images, labels, augment, keep_prob, logits, prob, loss, train_step = layers
+	row_images, labels, augment, keep_prob, logits, prob, train_step = layers
 
 	lgts = np.empty(shape=(0,10))
-	for batch in batches:
-		print batch
+	for i in range(1,6):
 
 		with open("/notebooks/Data/cifar10/data_batch_{0}".format(i),"rb") as f:
 			data = pkl.load(f)
@@ -31,8 +30,13 @@ with tf.Session() as sess:
 				row_images: data["data"][I],
 				augment: False,
 				keep_prob:  1.0,
-				})
+				})[:,0,0,:]
 			))
+
+		print 1-accuracy_score(
+			data["labels"],
+			np.argmax(lgts[((i-1)*10000):(i*10000)], axis=1)
+		)
 
 with open("/notebooks/Data/cifar10/vgg{0}_logits.pkl".format(VGG),"wb") as f:
 	pkl.dump(lgts, f)

@@ -7,7 +7,7 @@ from load import load
 
 VGG        = 16
 N_FC       = 1024 # Fully Connected Layers
-EPOCHS     = 75
+EPOCHS     = 50
 
 def batch_norm(layer, dim):
 	'''
@@ -30,8 +30,6 @@ def data_aug(images):
 	images = tf.map_fn(
 		lambda img: tf.image.random_flip_left_right(img), images)
 	images = tf.map_fn(
-		lambda img: tf.image.random_flip_up_down(img), images)
-	images = tf.map_fn(
 		lambda img: tf.image.random_brightness(img, max_delta=63), images)
 	images = tf.map_fn(
 		lambda img: tf.image.random_contrast(img, lower=0.2, upper=1.8), images)
@@ -49,7 +47,7 @@ def graph(VGG, N_FC):
 
 	# Data Augmentation
 	augment = tf.placeholder(tf.bool, name="augment")
-	images = tf.cond(augment, lambda: data_aug(images), lambda: images)
+	images  = tf.cond(augment, lambda: data_aug(images), lambda: images)
 
 	# Convolution
 	pool5      = load(VGG, images, layer="pool5")
@@ -103,7 +101,7 @@ if __name__ == '__main__':
 		test_data["data"]   = np.array(test_data["data"])
 		test_data["labels"] = np.array(test_data["labels"], dtype=int)
 
-		min_err = 0.16
+		min_err = 0.15
 		for epoch in range(EPOCHS):
 			print"epoch: ", epoch+1
 			for i in range(1,6):

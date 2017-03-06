@@ -4,8 +4,8 @@ import tensorflow as tf
 from sklearn.metrics import accuracy_score
 
 # one of "baseline", "reg_logits" or "know_dist".
-MODE = "baseline"
-TEMP = 10. # Temperature while using knowledge distillation.
+MODE = "know_dist"
+TEMP = 35. # Temperature while using knowledge distillation.
 BETA = 0.05 # Weight given to true labels while using knowledge distillation.
 
 # One of "vgg16" or "fmp"
@@ -14,7 +14,7 @@ TEACHER = "vgg16"
 if MODE=="baseline" or MODE=="reg_logits":
 	FOLDER = "saved/student_1/{0}/".format(MODE)
 elif MODE=="know_dist":
-	FOLDER = "saved/student_1/{0}_T{1}_beta{2}_{3}/".format(MODE,TEMP,BETA,TEACHER)
+	FOLDER = "saved/student_1/{0}_T{1}_beta{2}/".format(MODE,TEMP,BETA)
 
 DATA_PATH  = "/notebooks/Data/cifar10"
 EPOCHS     = 100
@@ -39,8 +39,6 @@ def batch_norm(current, training):
 def data_aug(images):
 	images = tf.map_fn(
 		lambda img: tf.image.random_flip_left_right(img), images)
-	images = tf.map_fn(
-		lambda img: tf.image.random_flip_up_down(img), images)
 	images = tf.map_fn(
 		lambda img: tf.image.random_brightness(img, max_delta=63), images)
 	images = tf.map_fn(
@@ -79,6 +77,9 @@ def graph():
 	row_images = tf.placeholder(tf.float32, shape=(None, 3072), name="row_images")
 	labels     = tf.placeholder(dtype=tf.int32, name="labels")
 	images     = tf.transpose(tf.reshape(row_images, (-1, 3, 32, 32)), perm=[0,2,3,1])
+	keep_prob  = tf.placeholder(dtype=tf.float32)
+	augment    = tf.placeholder(dtype=tf.bool)
+	training   = tf.placeholder(dtype=tf.bool)
 	t_logits   = tf.placeholder(dtype=tf.float32, shape=(None, 10))
 
 	current = tf.cond(augment, lambda: data_aug(images), lambda: images)
@@ -96,36 +97,37 @@ def graph():
 	current = conv(current, 1, 1, H, 10, padding="VALID")
 	f_log   = current[:,0,0,:]
 
-	return labels, t_logits, images, keep_prob, training, augment, f_log
+	return labels, t_logits, row_images, augment, training,\
+	keep_prob, training, augment, f_log
 
 
 def baseline():
 	'''
 	Train student network directly on the labels.
 	'''
-	labels, t_logits, images, keep_prob, training, augment, f_log = graph()
+	labels, t_logits, row_images, augment, training,\
+	keep_prob, training, augment, f_log = graph()
 
 	prob       = tf.nn.softmax(f_log)
 	loss       = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
 		 logits=f_log, labels=labels))
 	train_step = tf.train.AdamOptimizer().minimize(loss)
 
-	return labels, t_logits, images, keep_prob, training, augment,\
+	return labels, t_logits, row_images, augment, keep_prob, training, augment,\
 	prob, train_step
 
 def regression_on_logits():
 	'''
 	Train the student network on a regression task to target the teacher logits.
 	'''
-	labels, t_logits, images, keep_prob, training, augment, f_log = graph()
+	labels, t_logits, row_images, augment, training,\
+	keep_prob, training, augment, f_log = graph()
 
 	prob       = tf.nn.softmax(f_log)
-	ft_log     = tf.reshape(t_logits, shape=(-1,2))
-	f_prob     = tf.nn.softmax(f_log)
-	loss       = tf.reduce_mean(tf.nn.l2_loss(f_log-ft_log))
+	loss       = tf.reduce_mean(tf.nn.l2_loss(f_log-t_logits))
 	train_step = tf.train.AdamOptimizer().minimize(loss)
 
-	return labels, t_logits, images, keep_prob, training, augment,\
+	return labels, t_logits, row_images, augment, keep_prob, training, augment,\
 	prob, train_step
 
 def knowledge_distillation(T, beta):
@@ -137,17 +139,17 @@ def knowledge_distillation(T, beta):
 	'''
 	assert 0.<=beta and beta <=1.
 
-	labels, t_logits, images, keep_prob, training, augment, f_log = graph()
+	labels, t_logits, row_images, augment, training,\
+	keep_prob, training, augment, f_log = graph()
 
-	ft_log     = tf.reshape(t_logits, shape=(-1,2))
 	prob       = tf.nn.softmax(f_log)
 	loss       = tf.pow(T,2.)*(1.-beta)*tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-		 logits=f_log/T, labels=tf.nn.softmax(ft_log/T)))+\
+		 logits=f_log/T, labels=tf.nn.softmax(t_logits/T)))+\
 		beta*tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
 		 logits=f_log, labels=labels))
 	train_step = tf.train.AdamOptimizer().minimize(loss)
 
-	return labels, t_logits, images, keep_prob, training, augment,\
+	return labels, t_logits, row_images, augment, keep_prob, training, augment,\
 	prob, train_step
 
 
@@ -188,14 +190,14 @@ if __name__ == '__main__':
 			init_op    = tf.global_variables_initializer()
 			sess.run(init_op)
 
-		labels, t_logits, images, keep_prob, training, augment,\
+		labels, t_logits, row_images, augment, keep_prob, training, augment,\
 		prob, train_step = layers
 
 		bn_update = tf.group(*tf.get_collection(tf.GraphKeys.UPDATE_OPS))
 
-		min_err = 0.15
+		N_miss  = 0
+		min_err = 0.35
 		for epoch in range(EPOCHS):
-			print"epoch: ", epoch+1
 			for i in range(1,6):
 
 				with open("/notebooks/Data/cifar10/data_batch_{0}".format(i),"rb") as f:
@@ -203,14 +205,18 @@ if __name__ == '__main__':
 
 				data["data"]   = np.array(data["data"])
 				data["labels"] = np.array(data["labels"], dtype=int)
+				t_logs         = teacher_logits[((i-1)*10000):(i*10000)]
 
-				I = np.random.choice(range(N_train), size=100, replace=False)
-				sess.run([train_step, bn_update], feed_dict={
+				for I in np.array_split(range(10000), 100):
+
+					sess.run([train_step, bn_update], feed_dict={
 						row_images: data["data"][I],
 						labels: data["labels"][I],
+						t_logits: t_logs[I],
 						augment: True,
 						keep_prob: 0.5,
-						})
+						training: True,
+					})
 
 			y_hat = np.empty(shape=(0,10))
 			for J in np.array_split(range(10000), 100):
@@ -219,18 +225,19 @@ if __name__ == '__main__':
 					row_images: test_data["data"][J],
 					augment: False,
 					keep_prob: 1.0,
-					})[:,0,0,:]
+					training: False,
+					})
 				))
 
 			test_labels = np.array(test_data["labels"])
 
 			err = 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
+			print "epoch: ", epoch+1
 			print "Err: ", err
 			if err<min_err:
 				print "Saving..."
 				min_err=err
-				new_saver = tf.train.Saver(max_to_keep=2)
-				new_saver.save(sess, "{0}student_1")
-
+				new_saver = tf.train.Saver(max_to_keep=1)
+				new_saver.save(sess, "{0}student_1".format(FOLDER))
 
 	print "Done!"
