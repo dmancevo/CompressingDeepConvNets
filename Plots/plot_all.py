@@ -79,7 +79,7 @@ for dataset in series.keys():
 				label="Teacher {0}".format(teacher),
 			)
 		ax.legend()
-		ax.set_ylabel("Err. Moving Avg. (15)")
+		ax.set_ylabel("Err. Moving Avg. ({0})".format(N_AVG))
 		ax.set_xlabel("Epochs")
 
 		plt.show()

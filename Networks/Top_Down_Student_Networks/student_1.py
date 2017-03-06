@@ -4,7 +4,7 @@ import tensorflow as tf
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
 # one of "baseline", "reg_logits" or "know_dist".
-MODE = "reg_logits"
+MODE = "know_dist"
 TEMP = 10. # Temperature while using knowledge distillation.
 BETA = 0.05 # Weight given to true labels while using knowledge distillation.
 
