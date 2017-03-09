@@ -3,23 +3,25 @@ import pickle as pkl
 import tensorflow as tf
 from sklearn.metrics import accuracy_score
 
-# one of "baseline", "reg_logits" or "know_dist".
-MODE = "know_dist"
-TEMP = 35. # Temperature while using knowledge distillation.
-BETA = 0.05 # Weight given to true labels while using knowledge distillation.
-
-# One of "vgg16" or "fmp"
-TEACHER = "vgg16"
-
-if MODE=="baseline" or MODE=="reg_logits":
-	FOLDER = "saved/student_1/{0}/".format(MODE)
-elif MODE=="know_dist":
-	FOLDER = "saved/student_1/{0}_T{1}_beta{2}/".format(MODE,TEMP,BETA)
-
-DATA_PATH  = "/notebooks/Data/cifar10"
+MODE       = "baseline" # one of baseline, reg_logits or know_dist
+TEMP       = 35. # Temperature while using knowledge distillation.
+BETA       = 0.05 # Weight given to true labels while using knowledge distillation.
+TEACHER    = "vgg16" # One of "vgg16" or "fmp"
 EPOCHS     = 100
 MINI_BATCH = 100
-K, H       = 20, 50
+
+STUDENT = "student_2"
+
+# K, H =  20, 50 #student 1
+K, H  = 70, 220 # student 2
+
+if MODE=="baseline" or MODE=="reg_logits":
+	FOLDER = "saved/{0}/{1}/".format(STUDENT, MODE)
+elif MODE=="know_dist":
+	FOLDER = "saved/{0}/{1}_T{2}_beta{3}/".format(STUDENT, MODE,TEMP,BETA)
+
+DATA_PATH  = "/notebooks/Data/cifar10"
+
 
 def batch_norm(current, training):
 	'''
@@ -72,7 +74,7 @@ def leaky_relu(current):
 
 def graph():
 	'''
-	Student Network
+	Student 1.
 	'''
 	row_images = tf.placeholder(tf.float32, shape=(None, 3072), name="row_images")
 	labels     = tf.placeholder(dtype=tf.int32, name="labels")
@@ -101,7 +103,7 @@ def graph():
 	keep_prob, training, augment, f_log
 
 
-def baseline():
+def baseline(graph):
 	'''
 	Train student network directly on the labels.
 	'''
@@ -116,7 +118,7 @@ def baseline():
 	return labels, t_logits, row_images, augment, keep_prob, training, augment,\
 	prob, train_step
 
-def regression_on_logits():
+def regression_on_logits(graph):
 	'''
 	Train the student network on a regression task to target the teacher logits.
 	'''
@@ -130,7 +132,7 @@ def regression_on_logits():
 	return labels, t_logits, row_images, augment, keep_prob, training, augment,\
 	prob, train_step
 
-def knowledge_distillation(T, beta):
+def knowledge_distillation(graph, T, beta):
 	'''
 	Train the student network via knowledge distillation.
 
@@ -167,7 +169,7 @@ if __name__ == '__main__':
 	with tf.Session() as sess:
 
 		try:
-			saver = tf.train.import_meta_graph("{0}student_1.meta".format(FOLDER))
+			saver = tf.train.import_meta_graph("{0}{1}.meta".format(FOLDER, STUDENT))
 			saver.restore(sess, tf.train.latest_checkpoint(FOLDER))
 			layers = tf.get_collection('layers')
 
@@ -178,11 +180,11 @@ if __name__ == '__main__':
 			print "Building graph from scratch..."
 
 			if MODE=="baseline":
-				layers = baseline()
+				layers = baseline(graph)
 			elif MODE=="reg_logits":
-				layers = regression_on_logits()
+				layers = regression_on_logits(graph)
 			elif MODE=="know_dist":
-				layers = knowledge_distillation(TEMP, BETA)
+				layers = knowledge_distillation(graph, TEMP, BETA)
 
 			for layer in layers:
 				tf.add_to_collection('layers', layer)
@@ -196,7 +198,7 @@ if __name__ == '__main__':
 		bn_update = tf.group(*tf.get_collection(tf.GraphKeys.UPDATE_OPS))
 
 		N_miss  = 0
-		min_err = 0.35
+		min_err = 0.28
 		for epoch in range(EPOCHS):
 			for i in range(1,6):
 
@@ -238,6 +240,6 @@ if __name__ == '__main__':
 				print "Saving..."
 				min_err=err
 				new_saver = tf.train.Saver(max_to_keep=1)
-				new_saver.save(sess, "{0}student_1".format(FOLDER))
+				new_saver.save(sess, "{0}{1}".format(FOLDER, STUDENT))
 
 	print "Done!"

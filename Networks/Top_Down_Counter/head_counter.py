@@ -9,7 +9,6 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 from scipy.ndimage.filters import gaussian_filter as gf
 from scipy.ndimage.filters import maximum_filter as mf
-
 import threading
 
 
@@ -24,12 +23,10 @@ def h_counter(heat_map, sigma=7, th=0.9, size=101):
 	'''
 	heat_map = gf(heat_map, sigma=sigma)
 	y, x = np.where(np.logical_and(
-		mf(heat_map,size=size)==heat_map,
+		mf(heat_map, size=size)==heat_map,
 		th<heat_map,
 	))
 	return len(x)
-
-
 
 def head_counter(heat_map, N=30,
 	sigma=(9.23, 1.5), th=(0.81, 0.039), size=(79, 40)):
@@ -66,6 +63,50 @@ def head_counter(heat_map, N=30,
 		t.join()
 
 	return np.mean(counts)
+
+def head_counter2(heat_map, sigma=8, N=100, it=100, nh=5):
+	'''
+	Count peaks by smoothing heat map, showering it with pixels
+	and performing gradient ascent for every pixel.
+
+	N: sample size.
+	nh: neighborhood radius.
+	'''
+	heat_map    = gf(heat_map, sigma=sigma)
+	peak_coords = np.empty(shape(N,2))
+	class ascendThread(threading.Thread):
+
+		def __init__(self, threadID):
+			threading.Thread.__init__(self)
+			self.id = threadID
+
+		def run(self):
+
+			y, x = np.random.uniform((0,0),heat_map.shape).astype(int)
+
+			for _ in it:
+				A    = heat_map[np.max(0,y-nh):np.min(y+nh,heat_map.shape[0]-1),
+				np.max(0,x-nh):np.min(x+nh,heat_map.shape[1]-1)]
+				_y, _x = np.unravel_index(np.argmax(A), A.shape)
+
+				if _y==y and _x==x:
+					break
+				else:
+					y, x = _y, _x
+
+			peak_coords[self.id] = np.array([y,x])
+
+	ascending_threads = [ascendThread(i) for i in range(N)]
+
+	for t in counting_threads:
+		t.start()
+
+	for t in counting_threads:
+		t.join()
+
+	return len(np.vstack({tuple(row) for row in A}))
+
+
 
 def score(heat_maps, head_counts, params):
 	'''
@@ -169,7 +210,7 @@ def sample_heat_maps(tt, M):
 
 if __name__ == '__main__':
 
-	M = 500
+	M = 100
 
 	print "Sampling..."
 	head_counts, heat_maps = sample_heat_maps("test", M)
@@ -180,6 +221,10 @@ if __name__ == '__main__':
 
 	params = (30, (8.0587801716068483, 1.5), (0.84875240583571387, 0.039), (72, 40))
 
-	print "R2: ", score(heat_maps, head_counts, params) # R2:  0.226591250172
+	r2, var = score(heat_maps, head_counts, params),  np.var(head_counts)
+	print "R2: ",  r2 # R2:  0.226591250172
+	print "Head Counts: ", np.sum(head_counts)
+	print "Mean err: ", M*np.sqrt(var)
+	print "Detector Err: ", M*np.sqrt(var*(1-r2))
 
 	
