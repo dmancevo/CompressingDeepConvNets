@@ -3,7 +3,7 @@ import pickle as pkl
 import tensorflow as tf
 from sklearn.metrics import accuracy_score
 
-MODE       = "baseline" # one of baseline, reg_logits or know_dist
+MODE       = "reg_logits" # one of baseline, reg_logits or know_dist
 TEMP       = 35. # Temperature while using knowledge distillation.
 BETA       = 0.05 # Weight given to true labels while using knowledge distillation.
 TEACHER    = "vgg16" # One of "vgg16" or "fmp"

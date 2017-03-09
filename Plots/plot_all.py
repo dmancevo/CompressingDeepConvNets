@@ -67,17 +67,14 @@ for dataset in series.keys():
 				label="{0} {1}".format(net, algo), legend=True)#, yerr=m_std)
 			else:
 				m_avg.plot(kind='line',
-				label="{0} {1}".format(net, algo), legend=True)#, ax=ax, yerr=m_std)
+				label="{0} {1}".format(net, algo), legend=True)#, yerr=m_std)
 
-			# m_std = pd.rolling_std(m_avg, N_AVG, ddof=0)
-			# ax.errorbar(range(len(m_avg)), m_avg, yerr=m_std, fmt='-o')
-
-		for teacher, err in teachers[dataset]:
-			ax.plot(
-				(0,len(m_avg)),(err,err),
-				'--',
-				label="Teacher {0}".format(teacher),
-			)
+	for teacher, err in teachers[dataset]:
+		ax.plot(
+			(0,len(m_avg)),(err,err),
+			'--',
+			label="Teacher {0}".format(teacher),
+		)
 		ax.legend()
 		ax.set_ylabel("Err. Moving Avg. ({0})".format(N_AVG))
 		ax.set_xlabel("Epochs")
