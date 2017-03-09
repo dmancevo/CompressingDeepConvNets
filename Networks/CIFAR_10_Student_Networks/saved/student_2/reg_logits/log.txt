@@ -165,4 +165,39 @@ epoch:  82
 Err:  0.2825
 epoch:  83
 Err:  0.2846
-
+epoch:  84
+Err:  0.2801
+epoch:  85
+Err:  0.2794
+epoch:  86
+Err:  0.2837
+epoch:  87
+Err:  0.2805
+epoch:  88
+Err:  0.2787
+epoch:  89
+Err:  0.2813
+epoch:  90
+Err:  0.2829
+epoch:  91
+Err:  0.2799
+epoch:  92
+Err:  0.2807
+epoch:  93
+Err:  0.2809
+epoch:  94
+Err:  0.2794
+epoch:  95
+Err:  0.2791
+epoch:  96
+Err:  0.2848
+epoch:  97
+Err:  0.2818
+epoch:  98
+Err:  0.2751
+Saving...
+epoch:  99
+Err:  0.285
+epoch:  100
+Err:  0.2836
+Done!
