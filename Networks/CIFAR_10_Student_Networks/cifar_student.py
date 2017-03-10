@@ -3,17 +3,16 @@ import pickle as pkl
 import tensorflow as tf
 from sklearn.metrics import accuracy_score
 
-MODE       = "reg_logits" # one of baseline, reg_logits or know_dist
-TEMP       = 35. # Temperature while using knowledge distillation.
+MODE       = "know_dist" # one of baseline, reg_logits or know_dist
+TEMP       = 5. # Temperature while using knowledge distillation.
 BETA       = 0.05 # Weight given to true labels while using knowledge distillation.
 TEACHER    = "vgg16" # One of "vgg16" or "fmp"
 EPOCHS     = 100
 MINI_BATCH = 100
 
-STUDENT = "student_2"
+N       = 2
+STUDENT = "student_{0}".format(N)
 
-# K, H =  20, 50 #student 1
-K, H  = 70, 220 # student 2
 
 if MODE=="baseline" or MODE=="reg_logits":
 	FOLDER = "saved/{0}/{1}/".format(STUDENT, MODE)
@@ -21,7 +20,6 @@ elif MODE=="know_dist":
 	FOLDER = "saved/{0}/{1}_T{2}_beta{3}/".format(STUDENT, MODE,TEMP,BETA)
 
 DATA_PATH  = "/notebooks/Data/cifar10"
-
 
 def batch_norm(current, training):
 	'''
@@ -67,14 +65,14 @@ def conv(current, height, width, chan_in, chan_out, padding="SAME"):
 
 def leaky_relu(current):
 	'''
-	Leaky ReLU activation with learnable parameter a.
+	Leaky ReLU activation.
 	'''
-	a = tf.Variable(np.random.uniform(0.07,0.13), dtype=tf.float32)
+	a = tf.constant(0.1, dtype=tf.float32)
 	return tf.maximum(current, a*current)
 
 def graph():
 	'''
-	Student 1.
+	Student 3.
 	'''
 	row_images = tf.placeholder(tf.float32, shape=(None, 3072), name="row_images")
 	labels     = tf.placeholder(dtype=tf.int32, name="labels")
@@ -86,12 +84,19 @@ def graph():
 
 	current = tf.cond(augment, lambda: data_aug(images), lambda: images)
 	current = batch_norm(current, training)
-	current = conv(current, 3, 3, 3, K)
-	current = leaky_relu(current)
-	current = tf.nn.dropout(current, keep_prob)
-	current = batch_norm(current, training)
 
-	current = conv(current, 32, 32, K, H, padding="VALID")
+	chan_in, chan_out = 3, 64
+	for l in range(N):
+	
+		current = conv(current, 3, 3, chan_in, chan_out)
+		current = leaky_relu(current)
+		current = tf.nn.max_pool(current, (1,2,2,1), (1,2,2,1), padding="VALID")
+		current = batch_norm(current, training)
+
+		chan_in = chan_out
+
+	H       = 161
+	current = conv(current, 32/(2**N),  32/(2**N), chan_in, H, padding="VALID")
 	current = leaky_relu(current)
 	current = tf.nn.dropout(current, keep_prob)
 	current = batch_norm(current, training)
@@ -103,7 +108,7 @@ def graph():
 	keep_prob, training, augment, f_log
 
 
-def baseline(graph):
+def baseline():
 	'''
 	Train student network directly on the labels.
 	'''
@@ -118,7 +123,7 @@ def baseline(graph):
 	return labels, t_logits, row_images, augment, keep_prob, training, augment,\
 	prob, train_step
 
-def regression_on_logits(graph):
+def regression_on_logits():
 	'''
 	Train the student network on a regression task to target the teacher logits.
 	'''
@@ -132,7 +137,7 @@ def regression_on_logits(graph):
 	return labels, t_logits, row_images, augment, keep_prob, training, augment,\
 	prob, train_step
 
-def knowledge_distillation(graph, T, beta):
+def knowledge_distillation(T, beta):
 	'''
 	Train the student network via knowledge distillation.
 
@@ -157,8 +162,10 @@ def knowledge_distillation(graph, T, beta):
 
 if __name__ == '__main__':
 
+	log = open("{0}log.txt".format(FOLDER),"a")
+
 	with open("/notebooks/Data/cifar10/test_batch","rb") as f:
-			test_data = pkl.load(f)
+		test_data = pkl.load(f)
 
 	test_data["data"]   = np.array(test_data["data"])
 	test_data["labels"] = np.array(test_data["labels"], dtype=int)
@@ -180,11 +187,11 @@ if __name__ == '__main__':
 			print "Building graph from scratch..."
 
 			if MODE=="baseline":
-				layers = baseline(graph)
+				layers = baseline()
 			elif MODE=="reg_logits":
-				layers = regression_on_logits(graph)
+				layers = regression_on_logits()
 			elif MODE=="know_dist":
-				layers = knowledge_distillation(graph, TEMP, BETA)
+				layers = knowledge_distillation(TEMP, BETA)
 
 			for layer in layers:
 				tf.add_to_collection('layers', layer)
@@ -236,10 +243,13 @@ if __name__ == '__main__':
 			err = 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
 			print "epoch: ", epoch+1
 			print "Err: ", err
+			log.write("epoch:  {0}\nErr:  {1}\n".format(epoch+1,err))
+			log.flush()
 			if err<min_err:
 				print "Saving..."
 				min_err=err
 				new_saver = tf.train.Saver(max_to_keep=1)
 				new_saver.save(sess, "{0}{1}".format(FOLDER, STUDENT))
 
+	log.close()
 	print "Done!"
