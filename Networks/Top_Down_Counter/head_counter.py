@@ -72,8 +72,8 @@ if __name__ == '__main__':
 		)
 
 		train_test = (
-			(trn_N, trn_file_names, "train"),
-			(tst_N, tst_file_names, "test")
+			# (trn_N, trn_file_names, "train"),
+			(tst_N, tst_file_names, "test"),
 		)
 
 		for tt_N, tt_file_names, tt in train_test:
