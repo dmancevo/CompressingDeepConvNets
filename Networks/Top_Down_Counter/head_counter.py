@@ -71,36 +71,36 @@ if __name__ == '__main__':
 			max_output_size=15
 		)
 
-		# Draw bounding boxes
-		# draw = tf.image.draw_bounding_boxes(images, boxes)
+		train_test = (
+			(trn_N, trn_file_names, "train"),
+			(tst_N, tst_file_names, "test")
+		)
 
-		# M = 300
-		J, n_boxes, S = [], [], []
-		# for _ in range(M):
-		for j in range(len(tst_N)):
+		for tt_N, tt_file_names, tt in train_test:
 
-			# j         = np.random.choice(range(len(tst_N)))
-			file_name = tst_file_names[j]
-			imgs      = [imread("{0}/test/{1}.jpg".format(DATA_PATH, file_name))]
+			J, n_boxes, S = [], [], []
+			for j in range(len(tt_N)):
 
-			n_boxes.append(len(sess.run(nmx, feed_dict={
-				images: imgs,
-				keep_prob: 1.,
-				augment: False,
-				training: False
-			})))
+				file_name = tt_file_names[j]
+				imgs      = [imread("{0}/{1}/{2}.jpg".format(DATA_PATH, tt, file_name))]
 
-			S.append(sess.run(score, feed_dict={
-				images: imgs,
-				keep_prob: 1.,
-				augment: False,
-				training: False
-			}))
+				n_boxes.append(len(sess.run(nmx, feed_dict={
+					images: imgs,
+					keep_prob: 1.,
+					augment: False,
+					training: False
+				})))
 
-			J.append(j)
+				S.append(sess.run(score, feed_dict={
+					images: imgs,
+					keep_prob: 1.,
+					augment: False,
+					training: False
+				}))
 
-			if j%100==0: print j
+				J.append(j)
 
+				if j%100==0: print j
 
-	with open("data.pkl","wb") as f:
-		pkl.dump((tst_N[J],  n_boxes, S), f)
+			with open("{0}.pkl".format(tt),"wb") as f:
+				pkl.dump((tt_N[J],  n_boxes, S), f)
