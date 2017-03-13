@@ -62,11 +62,18 @@ for dataset in series.keys():
 
 			# m_std = pd.rolling_std(m_avg, N_AVG, ddof=0)
 
+			if re.match(r'baseline',algo):
+				marker = ','
+			elif re.match(r'reg_logits',algo):
+				marker='^'
+			elif re.match(r'know_dist',algo):
+				marker='*'
+
 			if i==0:
-				ax = m_avg.plot(kind='line', title=dataset, marker='o',
+				ax = m_avg.plot(kind='line', title=dataset, marker=marker,
 				label="{0} {1}".format(net, algo), legend=True)#, yerr=m_std)
 			else:
-				m_avg.plot(kind='line', 
+				m_avg.plot(kind='line', marker=marker,
 				label="{0} {1}".format(net, algo), legend=True)#, yerr=m_std)
 
 	for teacher, err in teachers[dataset]:
