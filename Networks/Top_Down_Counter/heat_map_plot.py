@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from filtering_and_suppression import head_counting
+from scipy import stats
 
 
 # with open("heat_maps.pkl", "rb") as f:
@@ -18,8 +18,30 @@ from filtering_and_suppression import head_counting
 # 	plt.show()
 # 	plt.close()
 
-with open("data.pkl","wb") as f:
+with open("data.pkl","rb") as f:
 	tst, n_boxes, scores = pkl.load(f)
 
-df = pd.DataFrame({'counts':tst,'n_boxes':n_boxes,'scores':scores})
-sns.lmplot(df)
+tst = tst.astype(float)
+
+df = pd.DataFrame({
+	'counts':tst,
+	'log counts':np.log(1+tst),
+	'n_boxes':n_boxes,
+	'scores':scores,
+})
+
+# sns.lmplot('n_boxes','counts',df, legend="hello")
+# plt.show()
+# sns.lmplot('scores','counts',df)
+# plt.show()
+
+sns.jointplot('n_boxes','counts',data=df, kind='reg')
+plt.show()
+sns.jointplot('n_boxes','log counts',data=df, kind='reg')
+plt.show()
+sns.jointplot('scores','counts',data=df, kind='reg')
+plt.show()
+sns.jointplot('scores','log counts',data=df, kind='reg')
+plt.show()
+
+# print("R2 Score: ")
