@@ -63,10 +63,10 @@ for dataset in series.keys():
 			# m_std = pd.rolling_std(m_avg, N_AVG, ddof=0)
 
 			if i==0:
-				ax = m_avg.plot(kind='line', title=dataset,
+				ax = m_avg.plot(kind='line', title=dataset, marker='o',
 				label="{0} {1}".format(net, algo), legend=True)#, yerr=m_std)
 			else:
-				m_avg.plot(kind='line',
+				m_avg.plot(kind='line', 
 				label="{0} {1}".format(net, algo), legend=True)#, yerr=m_std)
 
 	for teacher, err in teachers[dataset]:

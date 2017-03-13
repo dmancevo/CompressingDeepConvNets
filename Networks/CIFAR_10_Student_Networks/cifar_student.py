@@ -10,7 +10,7 @@ TEACHER    = "vgg16" # One of "vgg16" or "fmp"
 EPOCHS     = 100
 MINI_BATCH = 100
 
-N       = 2
+N       = 3
 STUDENT = "student_{0}".format(N)
 
 
