@@ -72,13 +72,14 @@ if __name__ == '__main__':
 		)
 
 		# Draw bounding boxes
-		draw = tf.image.draw_bounding_boxes(images, boxes)
+		# draw = tf.image.draw_bounding_boxes(images, boxes)
 
-		M = 300
+		# M = 300
 		J, n_boxes, S = [], [], []
-		for _ in range(M):
+		# for _ in range(M):
+		for j in range(len(tst_N)):
 
-			j         = np.random.choice(range(len(tst_N)))
+			# j         = np.random.choice(range(len(tst_N)))
 			file_name = tst_file_names[j]
 			imgs      = [imread("{0}/test/{1}.jpg".format(DATA_PATH, file_name))]
 
@@ -97,6 +98,8 @@ if __name__ == '__main__':
 			}))
 
 			J.append(j)
+
+			if j%100==0: print j
 
 
 	with open("data.pkl","wb") as f:
