@@ -10,7 +10,7 @@ sns.set_style("white")
 PATH  = "../Networks/"
 N_AVG = 15
 
-dir_reg   = re.compile(r'.*Networks/(.+)_Student_Networks/saved/(student_\d)\/(.+)')
+dir_reg   = re.compile(r'.*Networks/(.+)_Student_Networks/saved/(student_[^\/]+)\/(.+)')
 err_reg   = re.compile(r'Err:  (\d\.\d+)')
 
 series = {}
@@ -60,6 +60,8 @@ for dataset in series.keys():
 		for i in range(len(errs)):
 			algo, m_avg = errs[i]
 
+			if len(m_avg)==0: continue
+
 			# m_std = pd.rolling_std(m_avg, N_AVG, ddof=0)
 
 			if re.match(r'baseline',algo):
@@ -70,22 +72,22 @@ for dataset in series.keys():
 				marker='*'
 
 			if i==0:
-				ax = m_avg.plot(kind='line', title=dataset, marker=marker,
-				label="{0} {1}".format(net, algo), legend=True)#, yerr=m_std)
+				ax = m_avg.plot(kind='line', title="{0} {1}".format(dataset, net),
+				marker=marker, label=algo, legend=True)#, yerr=m_std)
 			else:
 				m_avg.plot(kind='line', marker=marker,
-				label="{0} {1}".format(net, algo), legend=True)#, yerr=m_std)
+				label=algo, legend=True)#, yerr=m_std)
 
-	for teacher, err in teachers[dataset]:
-		ax.plot(
-			(0,len(m_avg)),(err,err),
-			'--',
-			label="Teacher {0}".format(teacher),
-		)
-		ax.legend()
-		ax.set_ylabel("Err. Moving Avg. ({0})".format(N_AVG))
-		ax.set_xlabel("Epochs")
+		for teacher, err in teachers[dataset]:
+			ax.plot(
+				(0,len(m_avg)),(err,err),
+				'--',
+				label="Teacher {0}".format(teacher),
+			)
+			ax.legend()
+			ax.set_ylabel("Err. Moving Avg. ({0})".format(N_AVG))
+			ax.set_xlabel("Epochs")
 
-	plt.show()
-	# plt.savefig(dataset+" "+net+".png")
-	# plt.close()
+		plt.show()
+		# plt.savefig(dataset+" "+net+".png")
+		# plt.close()

@@ -1,26 +1,34 @@
+import sys, getopt
 import numpy as np
 import pickle as pkl
 import tensorflow as tf
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
-# one of "baseline", "reg_logits" or "know_dist".
-MODE = "know_dist"
-TEMP = 10. # Temperature while using knowledge distillation.
-BETA = 0.05 # Weight given to true labels while using knowledge distillation.
+if __name__ == '__main__':
 
-if MODE=="baseline" or MODE=="reg_logits":
-	FOLDER = "saved/student_1/{0}/".format(MODE)
-elif MODE=="know_dist":
-	FOLDER = "saved/student_1/{0}_T{1}_beta{2}/".format(MODE,TEMP,BETA)
+	TEMP = 10. # Temperature while using knowledge distillation.
+	BETA = 0.05 # Weight given to true labels while using knowledge distillation.
 
-DATA_PATH                 = "/notebooks/Data/top_down_view"
-CROP_HEIGHT, CROP_WIDTH   = 60, 80
-IMAGE_HEIGHT, IMAGE_WIDTH = 240, 320
+	optlist = getopt.getopt(sys.argv[1:], "K:H:M:")[0]
+	for opt, arg in optlist:
+		if   opt=='-K': K=int(arg)
+		elif opt=='-H': H=int(arg)
+		elif opt=='-M': MODE=arg # one of baseline, reg_logits or know_dist
 
-EPOCHS     = 100
-MINI_BATCH = 100
-K, H       = 20, 50
+	NAME = "student_1_{0}_{1}"
+	print "Training Top Down View", NAME 
 
+	if MODE=="baseline" or MODE=="reg_logits":
+		FOLDER = "/notebooks/Networks/Top_Down_Student_Networks/saved/{0}/{1}/".format(NAME, MODE)
+	elif MODE=="know_dist":
+		FOLDER = "/notebooks/Networks/Top_Down_Student_Networks/saved/{0}/{1}_T{2}_beta{3}/".format(NAME,MODE,TEMP,BETA)
+
+	DATA_PATH                 = "/notebooks/Data/top_down_view"
+	CROP_HEIGHT, CROP_WIDTH   = 60, 80
+	IMAGE_HEIGHT, IMAGE_WIDTH = 240, 320
+
+	EPOCHS     = 100
+	MINI_BATCH = 100
 
 def batch_norm(current, training):
 	'''
@@ -160,6 +168,8 @@ def knowledge_distillation(T, beta):
 
 if __name__ == '__main__':
 
+	log = open("{0}log.txt".format(FOLDER),"w")
+
 	with open("{0}/train.pkl".format(DATA_PATH), "rb") as f:
 		train_labels, train_crops = pkl.load(f)
 
@@ -177,29 +187,20 @@ if __name__ == '__main__':
 
 	with tf.Session() as sess:
 
-		try:
-			saver = tf.train.import_meta_graph("{0}student_1.meta".format(FOLDER))
-			saver.restore(sess, tf.train.latest_checkpoint(FOLDER))
-			layers = tf.get_collection('layers')
+		print "Building graph from scratch..."
 
-			print "Successfully loaded graph from file."
+		if MODE=="baseline":
+			layers = baseline()
+		elif MODE=="reg_logits":
+			layers = regression_on_logits()
+		elif MODE=="know_dist":
+			layers = knowledge_distillation(TEMP, BETA)
 
-		except IOError:
+		for layer in layers:
+			tf.add_to_collection('layers', layer)
 
-			print "Building graph from scratch..."
-
-			if MODE=="baseline":
-				layers = baseline()
-			elif MODE=="reg_logits":
-				layers = regression_on_logits()
-			elif MODE=="know_dist":
-				layers = knowledge_distillation(TEMP, BETA)
-
-			for layer in layers:
-				tf.add_to_collection('layers', layer)
-
-			init_op    = tf.global_variables_initializer()
-			sess.run(init_op)
+		init_op    = tf.global_variables_initializer()
+		sess.run(init_op)
 
 		labels, t_logits, images, keep_prob, training, augment,\
 		prob, f_prob, train_step = layers
@@ -235,10 +236,12 @@ if __name__ == '__main__':
 			err = 1-accuracy_score(test_labels,np.argmax(y_hat,axis=1))
 			print "epoch: ", epoch+1
 			print "Crp Err: ", err
+			log.write("epoch:  {0}\nErr:  {1}\n".format(epoch+1,err))
+			log.flush()
 			if err<min_err:
 				min_err=err
 				new_saver = tf.train.Saver(max_to_keep=1)
-				new_saver.save(sess, "{0}student_1".format(FOLDER))
+				new_saver.save(sess, "{0}{1}".format(FOLDER, NAME))
 
 				precision, recall, f1, support = precision_recall_fscore_support(
 					test_labels,
@@ -250,3 +253,6 @@ if __name__ == '__main__':
 				print "Crp Precision: ", precision
 				print "Crp Recall: ", recall
 				print "Crp F1 Score: ", f1
+
+	log.close()
+	print "Done!"

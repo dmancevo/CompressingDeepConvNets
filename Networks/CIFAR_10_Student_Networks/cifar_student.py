@@ -1,25 +1,36 @@
+import sys, getopt
 import numpy as np
 import pickle as pkl
 import tensorflow as tf
 from sklearn.metrics import accuracy_score
 
-MODE       = "know_dist" # one of baseline, reg_logits or know_dist
-TEMP       = 5. # Temperature while using knowledge distillation.
-BETA       = 0.05 # Weight given to true labels while using knowledge distillation.
-TEACHER    = "vgg16" # One of "vgg16" or "fmp"
-EPOCHS     = 100
-MINI_BATCH = 100
+if __name__=='__main__':
 
-N       = 3
-STUDENT = "student_{0}".format(N)
+	CHANNELS   = 256
+	TEMP       = 5. # Temperature while using knowledge distillation.
+	BETA       = 0.05 # Weight given to true labels while using knowledge distillation.
+
+	TEACHER    = "vgg16" # One of "vgg16" or "fmp"
+	EPOCHS     = 100
+	MINI_BATCH = 100
 
 
-if MODE=="baseline" or MODE=="reg_logits":
-	FOLDER = "saved/{0}/{1}/".format(STUDENT, MODE)
-elif MODE=="know_dist":
-	FOLDER = "saved/{0}/{1}_T{2}_beta{3}/".format(STUDENT, MODE,TEMP,BETA)
+	optlist = getopt.getopt(sys.argv[1:], "N:M:")[0]
+	print optlist
+	for opt, arg in optlist:
+		if   opt=='-N': N=int(arg)
+		elif opt=='-M': MODE=arg # one of baseline, reg_logits or know_dist
 
-DATA_PATH  = "/notebooks/Data/cifar10"
+	NAME = "student_{0}".format(N)
+	print "Training CIFAR-10", NAME
+
+
+	if MODE=="baseline" or MODE=="reg_logits":
+		FOLDER = "/notebooks/Networks/CIFAR_10_Student_Networks/saved/{0}/{1}/".format(NAME, MODE)
+	elif MODE=="know_dist":
+		FOLDER = "/notebooks/Networks/CIFAR_10_Student_Networks/saved/{0}/{1}_T{2}_beta{3}/".format(NAME, MODE,TEMP,BETA)
+
+	DATA_PATH  = "/notebooks/Data/cifar10"
 
 def batch_norm(current, training):
 	'''
@@ -85,17 +96,16 @@ def graph():
 	current = tf.cond(augment, lambda: data_aug(images), lambda: images)
 	current = batch_norm(current, training)
 
-	chan_in, chan_out = 3, 64
+	chan_in = 3
 	for l in range(N):
-	
+		chan_out= l*CHANNELS
 		current = conv(current, 3, 3, chan_in, chan_out)
 		current = leaky_relu(current)
 		current = tf.nn.max_pool(current, (1,2,2,1), (1,2,2,1), padding="VALID")
 		current = batch_norm(current, training)
-
 		chan_in = chan_out
 
-	H       = 161
+	H       = 32
 	current = conv(current, 32/(2**N),  32/(2**N), chan_in, H, padding="VALID")
 	current = leaky_relu(current)
 	current = tf.nn.dropout(current, keep_prob)
@@ -162,7 +172,7 @@ def knowledge_distillation(T, beta):
 
 if __name__ == '__main__':
 
-	log = open("{0}log.txt".format(FOLDER),"a")
+	log = open("{0}log.txt".format(FOLDER),"w")
 
 	with open("/notebooks/Data/cifar10/test_batch","rb") as f:
 		test_data = pkl.load(f)
@@ -175,29 +185,20 @@ if __name__ == '__main__':
 
 	with tf.Session() as sess:
 
-		try:
-			saver = tf.train.import_meta_graph("{0}{1}.meta".format(FOLDER, STUDENT))
-			saver.restore(sess, tf.train.latest_checkpoint(FOLDER))
-			layers = tf.get_collection('layers')
+		print "Building graph from scratch..."
 
-			print "Successfully loaded graph from file."
+		if MODE=="baseline":
+			layers = baseline()
+		elif MODE=="reg_logits":
+			layers = regression_on_logits()
+		elif MODE=="know_dist":
+			layers = knowledge_distillation(TEMP, BETA)
 
-		except IOError:
+		for layer in layers:
+			tf.add_to_collection('layers', layer)
 
-			print "Building graph from scratch..."
-
-			if MODE=="baseline":
-				layers = baseline()
-			elif MODE=="reg_logits":
-				layers = regression_on_logits()
-			elif MODE=="know_dist":
-				layers = knowledge_distillation(TEMP, BETA)
-
-			for layer in layers:
-				tf.add_to_collection('layers', layer)
-
-			init_op    = tf.global_variables_initializer()
-			sess.run(init_op)
+		init_op    = tf.global_variables_initializer()
+		sess.run(init_op)
 
 		labels, t_logits, row_images, augment, keep_prob, training, augment,\
 		prob, train_step = layers
@@ -249,7 +250,7 @@ if __name__ == '__main__':
 				print "Saving..."
 				min_err=err
 				new_saver = tf.train.Saver(max_to_keep=1)
-				new_saver.save(sess, "{0}{1}".format(FOLDER, STUDENT))
+				new_saver.save(sess, "{0}{1}".format(FOLDER, NAME))
 
 	log.close()
 	print "Done!"
