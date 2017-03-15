@@ -105,7 +105,6 @@ def graph():
 		current = batch_norm(current, training)
 		chan_in = chan_out
 
-	H       = 32
 	current = conv(current, 32/(2**N),  32/(2**N), chan_in, H, padding="VALID")
 	current = leaky_relu(current)
 	current = tf.nn.dropout(current, keep_prob)

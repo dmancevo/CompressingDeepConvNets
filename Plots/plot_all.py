@@ -25,6 +25,27 @@ teachers = {
 	)
 }
 
+colors = {
+	"CIFAR_10": {
+		"student_1":{
+			"N1_H32": "#3498db",
+			"N2_H32": "#34495e",
+			"N2_H64": "#9b59b6",
+		}
+	},
+	"Top_Down": {
+		"student_1":{
+			"20_50": "#3498db",
+			"10_15": "#34495e",
+			"7_10": "#9b59b6",
+		},
+		"student_2":{
+			"25": "#3498db",
+			"38": "#34495e",
+		}
+	}
+}
+
 for dirpath, dirnames, filenames in os.walk(PATH):
 
 
@@ -57,7 +78,6 @@ for dirpath, dirnames, filenames in os.walk(PATH):
 for dataset in series.keys():
 
 	for net in series[dataset].keys():
-
 		ax=None
 		for config in series[dataset][net].keys():
 
@@ -73,16 +93,18 @@ for dataset in series.keys():
 				if re.match(r'baseline',algo):
 					marker = ','
 				elif re.match(r'reg_logits',algo):
-					marker='^'
-				elif re.match(r'know_dist',algo):
 					marker='*'
+				elif re.match(r'know_dist',algo):
+					marker='d'
 
 				if not ax:
-					ax = m_avg.plot(kind='line', title="{0} {1}".format(dataset, net),
-					marker=marker, label="{0} {1}".format(config, algo), legend=True)#, yerr=m_std)
+					ax = m_avg.plot(kind='line', title="{0} {1}".format(dataset, net), 
+					marker=marker, label="{0} {1}".format(config, algo),
+					legend=True, color=colors[dataset][net][config])#, yerr=m_std)
 				else:
 					m_avg.plot(kind='line', ax=ax, marker=marker,
-					label="{0} {1}".format(config, algo), legend=True)#, yerr=m_std)
+					label="{0} {1}".format(config, algo),
+					legend=True, color=colors[dataset][net][config])#, yerr=m_std)
 
 		for teacher, err in teachers[dataset]:
 			ax.plot(

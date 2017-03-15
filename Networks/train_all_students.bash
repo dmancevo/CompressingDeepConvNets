@@ -1,5 +1,5 @@
 # # python /notebooks/Networks/CIFAR_10_Student_Networks/cifar_student.py -N 1 -H 32 -M baseline
-# #python /notebooks/Networks/CIFAR_10_Student_Networks/cifar_student.py -N 2 -H 32 -M baseline
+# # python /notebooks/Networks/CIFAR_10_Student_Networks/cifar_student.py -N 2 -H 32 -M baseline
 python /notebooks/Networks/CIFAR_10_Student_Networks/cifar_student.py -N 2 -H 64 -M baseline
 
 # python /notebooks/Networks/CIFAR_10_Student_Networks/cifar_student.py -N 1 -H 32 -M reg_logits
