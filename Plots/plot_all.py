@@ -61,8 +61,6 @@ for dataset in series.keys():
 		ax=None
 		for config in series[dataset][net].keys():
 
-			print config
-
 			for errs in series[dataset][net][config]:
 
 
@@ -88,7 +86,7 @@ for dataset in series.keys():
 
 		for teacher, err in teachers[dataset]:
 			ax.plot(
-				(0,len(m_avg)),(err,err),
+				(0,100),(err,err),
 				'--',
 				label="Teacher {0}".format(teacher),
 			)

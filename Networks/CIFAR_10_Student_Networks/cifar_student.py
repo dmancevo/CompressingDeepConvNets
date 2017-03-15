@@ -15,12 +15,13 @@ if __name__=='__main__':
 	MINI_BATCH = 100
 
 
-	optlist = getopt.getopt(sys.argv[1:], "N:M:")[0]
+	optlist = getopt.getopt(sys.argv[1:], "N:H:M:")[0]
 	for opt, arg in optlist:
 		if   opt=='-N': N=int(arg)
+		elif opt=='-H': H=int(arg)
 		elif opt=='-M': MODE=arg # one of baseline, reg_logits or know_dist
 
-	NAME = "student_1_N{0}".format(N)
+	NAME = "student_1_N{0}_H{1}".format(N,H)
 	print "Training CIFAR-10", NAME
 
 
