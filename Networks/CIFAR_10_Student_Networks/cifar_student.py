@@ -16,12 +16,11 @@ if __name__=='__main__':
 
 
 	optlist = getopt.getopt(sys.argv[1:], "N:M:")[0]
-	print optlist
 	for opt, arg in optlist:
 		if   opt=='-N': N=int(arg)
 		elif opt=='-M': MODE=arg # one of baseline, reg_logits or know_dist
 
-	NAME = "student_{0}".format(N)
+	NAME = "student_1_N{0}".format(N)
 	print "Training CIFAR-10", NAME
 
 
@@ -97,7 +96,7 @@ def graph():
 	current = batch_norm(current, training)
 
 	chan_in = 3
-	for l in range(N):
+	for l in range(1,N+1):
 		chan_out= l*CHANNELS
 		current = conv(current, 3, 3, chan_in, chan_out)
 		current = leaky_relu(current)
@@ -171,6 +170,7 @@ def knowledge_distillation(T, beta):
 
 
 if __name__ == '__main__':
+		
 
 	log = open("{0}log.txt".format(FOLDER),"w")
 

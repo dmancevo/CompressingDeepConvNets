@@ -10,7 +10,7 @@ sns.set_style("white")
 PATH  = "../Networks/"
 N_AVG = 15
 
-dir_reg   = re.compile(r'.*Networks/(.+)_Student_Networks/saved/(student_[^\/]+)\/(.+)')
+dir_reg   = re.compile(r'.*Networks/(.+)_Student_Networks/saved/(student_\d)_([^\/]+)\/(.+)')
 err_reg   = re.compile(r'Err:  (\d\.\d+)')
 
 series = {}
@@ -36,17 +36,20 @@ for dirpath, dirnames, filenames in os.walk(PATH):
 			with open(dirpath+"/log.txt", "r") as f:
 				raw_log = f.readlines()
 
-			dataset, net, algo = mtch.group(1), mtch.group(2), mtch.group(3)
+			dataset, net, config, algo = mtch.group(1), mtch.group(2), mtch.group(3), mtch.group(4)
 
 			if dataset not in series:
 				series[dataset] = {}
 
 			if net not in series[dataset]:
-				series[dataset][net] = []
+				series[dataset][net] = {}
+
+			if config not in series[dataset][net]:
+				series[dataset][net][config] = []
 
 			err    = pd.Series(err_reg.findall(" ".join(raw_log)), dtype=float)
 			m_avg  = pd.rolling_mean(err, N_AVG)
-			series[dataset][net].append((algo, m_avg))
+			series[dataset][net][config].append((algo, m_avg))
 
 		except IOError:
 			print dirpath, "has no log file."
@@ -55,28 +58,33 @@ for dataset in series.keys():
 
 	for net in series[dataset].keys():
 
-		errs = series[dataset][net]
+		ax=None
+		for config in series[dataset][net].keys():
 
-		for i in range(len(errs)):
-			algo, m_avg = errs[i]
+			print config
 
-			if len(m_avg)==0: continue
+			for errs in series[dataset][net][config]:
 
-			# m_std = pd.rolling_std(m_avg, N_AVG, ddof=0)
 
-			if re.match(r'baseline',algo):
-				marker = ','
-			elif re.match(r'reg_logits',algo):
-				marker='^'
-			elif re.match(r'know_dist',algo):
-				marker='*'
+				algo, m_avg = errs
 
-			if i==0:
-				ax = m_avg.plot(kind='line', title="{0} {1}".format(dataset, net),
-				marker=marker, label=algo, legend=True)#, yerr=m_std)
-			else:
-				m_avg.plot(kind='line', marker=marker,
-				label=algo, legend=True)#, yerr=m_std)
+				if len(m_avg)==0: continue
+
+				# m_std = pd.rolling_std(m_avg, N_AVG, ddof=0)
+
+				if re.match(r'baseline',algo):
+					marker = ','
+				elif re.match(r'reg_logits',algo):
+					marker='^'
+				elif re.match(r'know_dist',algo):
+					marker='*'
+
+				if not ax:
+					ax = m_avg.plot(kind='line', title="{0} {1}".format(dataset, net),
+					marker=marker, label="{0} {1}".format(config, algo), legend=True)#, yerr=m_std)
+				else:
+					m_avg.plot(kind='line', ax=ax, marker=marker,
+					label="{0} {1}".format(config, algo), legend=True)#, yerr=m_std)
 
 		for teacher, err in teachers[dataset]:
 			ax.plot(

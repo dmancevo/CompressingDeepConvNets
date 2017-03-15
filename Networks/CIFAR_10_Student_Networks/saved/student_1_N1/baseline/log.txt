@@ -1,0 +1,6 @@
+epoch:  1
+Err:  0.5148
+epoch:  2
+Err:  0.4706
+epoch:  3
+Err:  0.4403

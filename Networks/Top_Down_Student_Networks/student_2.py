@@ -28,8 +28,8 @@ if __name__ == '__main__':
 	CROP_HEIGHT, CROP_WIDTH   = 60, 80
 	IMAGE_HEIGHT, IMAGE_WIDTH = 240, 320
 
-	HINT_EPOCHS = 30
-	EPOCHS      = 10
+	HINT_EPOCHS = 50
+	EPOCHS      = 100
 	MINI_BATCH  = 100
 
 def graph():
