@@ -16,7 +16,7 @@ if __name__ == '__main__':
 		elif opt=='-M': MODE=arg # one of baseline, reg_logits or know_dist
 
 	NAME = "student_1_{0}_{1}"
-	print "Training Top Down View", NAME 
+	print "###################### Training Top Down View", NAME, MODE
 
 	if MODE=="baseline" or MODE=="reg_logits":
 		FOLDER = "/notebooks/Networks/Top_Down_Student_Networks/saved/{0}/{1}/".format(NAME, MODE)

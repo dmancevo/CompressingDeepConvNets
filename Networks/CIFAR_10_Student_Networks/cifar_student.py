@@ -22,7 +22,7 @@ if __name__=='__main__':
 		elif opt=='-M': MODE=arg # one of baseline, reg_logits or know_dist
 
 	NAME = "student_1_N{0}_H{1}".format(N,H)
-	print "Training CIFAR-10", NAME
+	print "###################### Training CIFAR-10", NAME, MODE
 
 
 	if MODE=="baseline" or MODE=="reg_logits":

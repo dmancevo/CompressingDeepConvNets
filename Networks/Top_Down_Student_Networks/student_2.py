@@ -17,7 +17,7 @@ if __name__ == '__main__':
 	BETA = 0.05 # Weight given to true labels while using knowledge distillation.
 
 	NAME = "student_2_{0}".format(CHANNELS)
-	print "Training Top Down View", NAME 
+	print "###################### Training Top Down View", NAME, MODE
 
 	if HINT_TRAINING:
 		FOLDER = "/notebooks/Networks/Top_Down_Student_Networks/saved/{0}/hint_based/".format(NAME)
