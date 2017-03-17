@@ -3,12 +3,12 @@
 # # python /notebooks/Networks/CIFAR_10_Student_Networks/cifar_student.py -N 2 -H 64 -M baseline
 
 # # python /notebooks/Networks/CIFAR_10_Student_Networks/cifar_student.py -N 1 -H 32 -M reg_logits
-python /notebooks/Networks/CIFAR_10_Student_Networks/cifar_student.py -N 2 -H 32 -M reg_logits
-python /notebooks/Networks/CIFAR_10_Student_Networks/cifar_student.py -N 2 -H 64 -M reg_logits
+# # python /notebooks/Networks/CIFAR_10_Student_Networks/cifar_student.py -N 2 -H 32 -M reg_logits
+# # python /notebooks/Networks/CIFAR_10_Student_Networks/cifar_student.py -N 2 -H 64 -M reg_logits
 
-# python /notebooks/Networks/CIFAR_10_Student_Networks/cifar_student.py -N 1 -H 32 -M know_dist
-# python /notebooks/Networks/CIFAR_10_Student_Networks/cifar_student.py -N 2 -H 32 -M know_dist
-# python /notebooks/Networks/CIFAR_10_Student_Networks/cifar_student.py -N 2 -H 64 -M know_dist
+python /notebooks/Networks/CIFAR_10_Student_Networks/cifar_student.py -N 1 -H 32 -M know_dist
+python /notebooks/Networks/CIFAR_10_Student_Networks/cifar_student.py -N 2 -H 32 -M know_dist
+python /notebooks/Networks/CIFAR_10_Student_Networks/cifar_student.py -N 2 -H 64 -M know_dist
 
 # # python /notebooks/Networks/Top_Down_Student_Networks/student_1.py -K 20 -H 50 -M baseline
 # # python /notebooks/Networks/Top_Down_Student_Networks/student_1.py -K 20 -H 50 -M reg_logits
