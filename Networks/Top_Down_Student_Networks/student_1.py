@@ -6,7 +6,7 @@ from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
 if __name__ == '__main__':
 
-	TEMP = 10. # Temperature while using knowledge distillation.
+	TEMP = 5. # Temperature while using knowledge distillation.
 	BETA = 0.05 # Weight given to true labels while using knowledge distillation.
 
 	optlist = getopt.getopt(sys.argv[1:], "K:H:M:")[0]
@@ -15,7 +15,7 @@ if __name__ == '__main__':
 		elif opt=='-H': H=int(arg)
 		elif opt=='-M': MODE=arg # one of baseline, reg_logits or know_dist
 
-	NAME = "student_1_{0}_{1}"
+	NAME = "student_1_{0}_{1}".format(K, H)
 	print "###################### Training Top Down View", NAME, MODE
 
 	if MODE=="baseline" or MODE=="reg_logits":

@@ -12,6 +12,7 @@ if __name__ == '__main__':
 	for opt, arg in optlist:
 		if   opt=='-C': CHANNELS=int(arg)
 		elif opt=='-H': HINT_TRAINING=bool(arg)
+		elif opt=='-M': MODE=arg # one of baseline or know_dist
 
 	TEMP = 10. # Temperature while using knowledge distillation.
 	BETA = 0.05 # Weight given to true labels while using knowledge distillation.
@@ -92,15 +93,20 @@ def graph():
 	hint_loss       = tf.reduce_mean(tf.nn.l2_loss(hints-reg))
 	hint_train_step = tf.train.AdamOptimizer(name="hint_train").minimize(hint_loss)
 
-
-	# Knowledge distillation
 	prob   = tf.nn.softmax(logits)
 	ft_log = tf.reshape(t_logits, shape=(-1,2))
 	f_prob = tf.nn.softmax(f_log)
-	loss   = tf.pow(TEMP,2.)*(1.-BETA)*tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-		 logits=f_log/TEMP, labels=tf.nn.softmax(ft_log/TEMP)))+\
-		 BETA*tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-	     logits=f_log, labels=labels))
+
+	if MODE=='baseline': # Train directly on raw labels
+		
+		loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
+		     logits=f_log, labels=labels))
+
+	elif MODE=='know_dist': # Knowledge distillation
+		loss   = tf.pow(TEMP,2.)*(1.-BETA)*tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
+			 logits=f_log/TEMP, labels=tf.nn.softmax(ft_log/TEMP)))+\
+			 BETA*tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
+		     logits=f_log, labels=labels))
 
 	train_step = tf.train.AdamOptimizer().minimize(loss)
 
