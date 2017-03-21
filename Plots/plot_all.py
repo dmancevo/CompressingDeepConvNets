@@ -92,10 +92,14 @@ for dataset in series.keys():
 
 				if re.match(r'baseline',algo):
 					marker = ','
+					if re.match(r'baseline_hint_based', algo):
+						marker = 's'
 				elif re.match(r'reg_logits',algo):
 					marker='*'
 				elif re.match(r'know_dist',algo):
 					marker='d'
+					if re.match(r'know_dist_hint_based',algo):
+						marker = 'p'
 
 				if not ax:
 					ax = m_avg.plot(kind='line', title="{0} {1}".format(dataset, net), 

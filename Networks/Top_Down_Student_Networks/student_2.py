@@ -8,22 +8,28 @@ from student_1 import batch_norm, data_aug, conv, leaky_relu
 
 if __name__ == '__main__':
 
-	optlist = getopt.getopt(sys.argv[1:], "C:H:")[0]
+	optlist = getopt.getopt(sys.argv[1:], "C:H:M:")[0]
 	for opt, arg in optlist:
 		if   opt=='-C': CHANNELS=int(arg)
-		elif opt=='-H': HINT_TRAINING=bool(arg)
+		elif opt=='-H': HINT_TRAINING=bool(int(arg))
 		elif opt=='-M': MODE=arg # one of baseline or know_dist
 
-	TEMP = 10. # Temperature while using knowledge distillation.
+	TEMP = 5. # Temperature while using knowledge distillation.
 	BETA = 0.05 # Weight given to true labels while using knowledge distillation.
 
 	NAME = "student_2_{0}".format(CHANNELS)
-	print "###################### Training Top Down View", NAME, MODE
+	print "###################### Training Top Down View", NAME, MODE, "Hint:", HINT_TRAINING
 
-	if HINT_TRAINING:
-		FOLDER = "/notebooks/Networks/Top_Down_Student_Networks/saved/{0}/hint_based/".format(NAME)
-	else:
-		FOLDER = "/notebooks/Networks/Top_Down_Student_Networks/saved/{0}/know_dist_only/".format(NAME)
+	if MODE=="baseline":
+		if HINT_TRAINING:
+			FOLDER = "/notebooks/Networks/Top_Down_Student_Networks/saved/{0}/baseline_hint_based/".format(NAME)
+		else:
+			FOLDER = "/notebooks/Networks/Top_Down_Student_Networks/saved/{0}/baseline/".format(NAME)
+	elif MODE=="know_dist":
+		if HINT_TRAINING:
+			FOLDER = "/notebooks/Networks/Top_Down_Student_Networks/saved/{0}/know_dist_hint_based/".format(NAME)
+		else:
+			FOLDER = "/notebooks/Networks/Top_Down_Student_Networks/saved/{0}/know_dist/".format(NAME)
 
 	DATA_PATH                 = "/notebooks/Data/top_down_view"
 	CROP_HEIGHT, CROP_WIDTH   = 60, 80
@@ -154,8 +160,9 @@ if __name__ == '__main__':
 
 		bn_update = tf.group(*tf.get_collection(tf.GraphKeys.UPDATE_OPS))
 
-		print "Hint training..."
+		
 		if HINT_TRAINING:
+			print "Hint training..."
 			for epoch in range(HINT_EPOCHS):
 				curr_hint_loss = []
 				for __ in range(N_train/MINI_BATCH):
