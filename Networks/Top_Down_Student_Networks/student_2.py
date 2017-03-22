@@ -62,7 +62,8 @@ def graph():
 		chan_out = c*CHANNELS
 		current  = conv(current, 3, 3, chan_in, chan_out)
 		current  = leaky_relu(current)
-		current  = tf.nn.dropout(current, keep_prob)
+		current  = conv(current, 3, 3, chan_out, chan_out)
+		current  = leaky_relu(current)
 		current  = tf.nn.max_pool(current, (1,2,2,1), (1,2,2,1), "VALID")
 		current  = batch_norm(current, training)
 		chan_in  = chan_out
@@ -171,7 +172,7 @@ if __name__ == '__main__':
 					sess.run([hint_train_step, bn_update], feed_dict={
 						hints: teacher_hints[I],
 						images: train_crops[I],
-						keep_prob: .5,
+						keep_prob: 1.,
 						augment: False,
 						training: True
 					})
@@ -199,7 +200,7 @@ if __name__ == '__main__':
 					labels: train_labels[I],
 					t_logits: teacher_logits[I],
 					images: train_crops[I],
-					keep_prob: .5,
+					keep_prob: 1. if MODE=='know_dist' else .5,
 					augment: True,
 					training: True
 				})

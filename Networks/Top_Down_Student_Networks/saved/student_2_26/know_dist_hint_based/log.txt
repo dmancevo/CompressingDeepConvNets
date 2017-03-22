@@ -1,0 +1,7 @@
+Hint Loss:  455361.65625
+Hint Loss:  446377.03125
+Hint Loss:  442763.6875
+Hint Loss:  409034.46875
+Hint Loss:  309098.34375
+Hint Loss:  256963.34375
+Hint Loss:  268100.40625

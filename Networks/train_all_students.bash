@@ -22,12 +22,12 @@
 # # python /notebooks/Networks/Top_Down_Student_Networks/student_1.py -K 7 -H 10 -M reg_logits
 # # python /notebooks/Networks/Top_Down_Student_Networks/student_1.py -K 7 -H 10 -M know_dist
 
-# # python /notebooks/Networks/Top_Down_Student_Networks/student_2.py -C 38 -H 0 -M baseline
-# # python /notebooks/Networks/Top_Down_Student_Networks/student_2.py -C 38 -H 1 -M baseline
-# # python /notebooks/Networks/Top_Down_Student_Networks/student_2.py -C 25 -H 0 -M baseline
-# # python /notebooks/Networks/Top_Down_Student_Networks/student_2.py -C 25 -H 1 -M baseline
+# # python /notebooks/Networks/Top_Down_Student_Networks/student_2.py -C 26 -H 0 -M baseline
+# # python /notebooks/Networks/Top_Down_Student_Networks/student_2.py -C 26 -H 1 -M baseline
+# # python /notebooks/Networks/Top_Down_Student_Networks/student_2.py -C 18 -H 0 -M baseline
+# # python /notebooks/Networks/Top_Down_Student_Networks/student_2.py -C 18 -H 1 -M baseline
 
-# # python /notebooks/Networks/Top_Down_Student_Networks/student_2.py -C 38 -H 0 -M know_dist
-python /notebooks/Networks/Top_Down_Student_Networks/student_2.py -C 38 -H 1 -M know_dist
-python /notebooks/Networks/Top_Down_Student_Networks/student_2.py -C 25 -H 0 -M know_dist
-python /notebooks/Networks/Top_Down_Student_Networks/student_2.py -C 25 -H 1 -M know_dist
+python /notebooks/Networks/Top_Down_Student_Networks/student_2.py -C 26 -H 0 -M know_dist
+python /notebooks/Networks/Top_Down_Student_Networks/student_2.py -C 26 -H 1 -M know_dist
+python /notebooks/Networks/Top_Down_Student_Networks/student_2.py -C 18 -H 0 -M know_dist
+python /notebooks/Networks/Top_Down_Student_Networks/student_2.py -C 18 -H 1 -M know_dist
