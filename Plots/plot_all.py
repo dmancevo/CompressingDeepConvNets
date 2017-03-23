@@ -37,11 +37,11 @@ colors = {
 		"student_1":{
 			"15_20": "#3498db",
 			"10_15": "#34495e",
-			"7_10": "#9b59b6",
+			"7_10":  "#9b59b6",
 		},
 		"student_2":{
-			"26": "#3498db",
-			"18": "#34495e",
+			"18": "#3498db",
+			"26": "#34495e",
 		}
 	}
 }
@@ -90,20 +90,24 @@ for dataset in series.keys():
 
 				# m_std = pd.rolling_std(m_avg, N_AVG, ddof=0)
 
-				if re.match(r'baseline',algo):
-					continue
+				if re.match(r'baseline$',algo):
+					# continue
 					marker = ','
-					if re.match(r'baseline_hint_based', algo):
-						marker = 's'
+				elif re.match(r'baseline_hint_based', algo):
+					# continue
+					marker = 's'
 				elif re.match(r'reg_logits',algo):
+					# continue
 					marker='*'
-				elif re.match(r'know_dist',algo):
+				elif re.match(r'know_dist$',algo):
+					# continue
 					marker='d'
-					if re.match(r'know_dist_hint_based',algo):
-						marker = 'h'
+				elif re.match(r'know_dist_hint_based',algo):
+					# continue
+					marker = 'h'
 
 				if not ax:
-					ax = m_avg.plot(kind='line', title="{0} {1}".format(dataset, net), 
+					ax = m_avg.plot(kind='line', #title="{0} {1}".format(dataset, net), 
 					marker=marker, label="{0} {1}".format(config, algo),
 					legend=True, color=colors[dataset][net][config])#, yerr=m_std)
 				else:
