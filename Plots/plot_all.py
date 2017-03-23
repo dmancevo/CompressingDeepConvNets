@@ -91,6 +91,7 @@ for dataset in series.keys():
 				# m_std = pd.rolling_std(m_avg, N_AVG, ddof=0)
 
 				if re.match(r'baseline',algo):
+					continue
 					marker = ','
 					if re.match(r'baseline_hint_based', algo):
 						marker = 's'
@@ -99,7 +100,7 @@ for dataset in series.keys():
 				elif re.match(r'know_dist',algo):
 					marker='d'
 					if re.match(r'know_dist_hint_based',algo):
-						marker = 'p'
+						marker = 'h'
 
 				if not ax:
 					ax = m_avg.plot(kind='line', title="{0} {1}".format(dataset, net), 

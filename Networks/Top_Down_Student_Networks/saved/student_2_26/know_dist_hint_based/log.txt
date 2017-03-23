@@ -5,3 +5,246 @@ Hint Loss:  409034.46875
 Hint Loss:  309098.34375
 Hint Loss:  256963.34375
 Hint Loss:  268100.40625
+Hint Loss:  284533.65625
+Hint Loss:  348428.0625
+Hint Loss:  419724.84375
+Hint Loss:  310703.71875
+Hint Loss:  340255.75
+Hint Loss:  313813.0625
+Hint Loss:  272735.25
+Hint Loss:  221898.578125
+Hint Loss:  300323.375
+Hint Loss:  295063.375
+Hint Loss:  223155.53125
+Hint Loss:  181578.96875
+Hint Loss:  371199.84375
+Hint Loss:  236730.53125
+Hint Loss:  266672.40625
+Hint Loss:  190500.484375
+Hint Loss:  165088.265625
+Hint Loss:  140274.875
+Hint Loss:  223696.265625
+Hint Loss:  212195.921875
+Hint Loss:  141670.625
+Hint Loss:  153434.375
+Hint Loss:  170197.203125
+Hint Loss:  222011.40625
+Hint Loss:  2952992.25
+Hint Loss:  71219609600.0
+Hint Loss:  9165390848.0
+Hint Loss:  427996.15625
+Hint Loss:  398138.59375
+Hint Loss:  365163.4375
+Hint Loss:  345810.40625
+Hint Loss:  337235.96875
+Hint Loss:  314411.34375
+Hint Loss:  299435.75
+Hint Loss:  288741.625
+Hint Loss:  277487.71875
+Hint Loss:  275882.9375
+Hint Loss:  268798.5625
+Hint Loss:  257291.484375
+Hint Loss:  250647.53125
+Hint Loss:  246833.375
+Hint Loss:  240404.65625
+Hint Loss:  235626.796875
+epoch:  1
+Err:  0.267083333333
+epoch:  2
+Err:  0.166041666667
+epoch:  3
+Err:  0.114166666667
+epoch:  4
+Err:  0.148125
+epoch:  5
+Err:  0.0583333333333
+epoch:  6
+Err:  0.0529166666667
+epoch:  7
+Err:  0.06
+epoch:  8
+Err:  0.08625
+epoch:  9
+Err:  0.0647916666667
+epoch:  10
+Err:  0.0645833333333
+epoch:  11
+Err:  0.05125
+epoch:  12
+Err:  0.0504166666667
+epoch:  13
+Err:  0.139166666667
+epoch:  14
+Err:  0.098125
+epoch:  15
+Err:  0.109583333333
+epoch:  16
+Err:  0.165
+epoch:  17
+Err:  0.0914583333333
+epoch:  18
+Err:  0.063125
+epoch:  19
+Err:  0.1925
+epoch:  20
+Err:  0.0385416666667
+epoch:  21
+Err:  0.0920833333333
+epoch:  22
+Err:  0.0704166666667
+epoch:  23
+Err:  0.0835416666667
+epoch:  24
+Err:  0.0877083333333
+epoch:  25
+Err:  0.0527083333333
+epoch:  26
+Err:  0.0708333333333
+epoch:  27
+Err:  0.061875
+epoch:  28
+Err:  0.068125
+epoch:  29
+Err:  0.0766666666667
+epoch:  30
+Err:  0.0885416666667
+epoch:  31
+Err:  0.0860416666667
+epoch:  32
+Err:  0.0485416666667
+epoch:  33
+Err:  0.0564583333333
+epoch:  34
+Err:  0.0539583333333
+epoch:  35
+Err:  0.058125
+epoch:  36
+Err:  0.0785416666667
+epoch:  37
+Err:  0.050625
+epoch:  38
+Err:  0.0454166666667
+epoch:  39
+Err:  0.0458333333333
+epoch:  40
+Err:  0.0872916666667
+epoch:  41
+Err:  0.0758333333333
+epoch:  42
+Err:  0.0654166666667
+epoch:  43
+Err:  0.0672916666667
+epoch:  44
+Err:  0.08
+epoch:  45
+Err:  0.0816666666667
+epoch:  46
+Err:  0.0625
+epoch:  47
+Err:  0.06
+epoch:  48
+Err:  0.0570833333333
+epoch:  49
+Err:  0.083125
+epoch:  50
+Err:  0.06125
+epoch:  51
+Err:  0.0966666666667
+epoch:  52
+Err:  0.0641666666667
+epoch:  53
+Err:  0.0560416666667
+epoch:  54
+Err:  0.0975
+epoch:  55
+Err:  0.0725
+epoch:  56
+Err:  0.07625
+epoch:  57
+Err:  0.0460416666667
+epoch:  58
+Err:  0.0972916666667
+epoch:  59
+Err:  0.0697916666667
+epoch:  60
+Err:  0.0710416666667
+epoch:  61
+Err:  0.069375
+epoch:  62
+Err:  0.064375
+epoch:  63
+Err:  0.0866666666667
+epoch:  64
+Err:  0.05375
+epoch:  65
+Err:  0.0845833333333
+epoch:  66
+Err:  0.129583333333
+epoch:  67
+Err:  0.079375
+epoch:  68
+Err:  0.107083333333
+epoch:  69
+Err:  0.069375
+epoch:  70
+Err:  0.0764583333333
+epoch:  71
+Err:  0.116041666667
+epoch:  72
+Err:  0.0629166666667
+epoch:  73
+Err:  0.0558333333333
+epoch:  74
+Err:  0.07375
+epoch:  75
+Err:  0.0772916666667
+epoch:  76
+Err:  0.095
+epoch:  77
+Err:  0.0583333333333
+epoch:  78
+Err:  0.0877083333333
+epoch:  79
+Err:  0.050625
+epoch:  80
+Err:  0.0691666666667
+epoch:  81
+Err:  0.0679166666667
+epoch:  82
+Err:  0.0758333333333
+epoch:  83
+Err:  0.08
+epoch:  84
+Err:  0.0675
+epoch:  85
+Err:  0.07625
+epoch:  86
+Err:  0.0710416666667
+epoch:  87
+Err:  0.0589583333333
+epoch:  88
+Err:  0.074375
+epoch:  89
+Err:  0.0741666666667
+epoch:  90
+Err:  0.065625
+epoch:  91
+Err:  0.0847916666667
+epoch:  92
+Err:  0.0504166666667
+epoch:  93
+Err:  0.064375
+epoch:  94
+Err:  0.081875
+epoch:  95
+Err:  0.0604166666667
+epoch:  96
+Err:  0.098125
+epoch:  97
+Err:  0.0608333333333
+epoch:  98
+Err:  0.106458333333
+epoch:  99
+Err:  0.0589583333333
+epoch:  100
+Err:  0.0889583333333
