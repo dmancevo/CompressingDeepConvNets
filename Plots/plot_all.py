@@ -48,7 +48,6 @@ colors = {
 
 for dirpath, dirnames, filenames in os.walk(PATH):
 
-
 	mtch    = dir_reg.match(dirpath)
 
 	if mtch:

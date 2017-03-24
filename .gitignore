@@ -5,6 +5,7 @@ Data/top_down_view/config.py
 *.data*
 *.meta
 *.index
+*.ipynb_checkpoints
 *checkpoint
 *.mat
 *.html
