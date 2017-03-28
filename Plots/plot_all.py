@@ -93,17 +93,19 @@ for dataset in series.keys():
 					# continue
 					marker = ','
 				elif re.match(r'baseline_hint_based', algo):
-					continue
+					# continue
 					marker = 's'
 				elif re.match(r'reg_logits',algo):
 					# continue
 					marker='*'
-				elif re.match(r'know_dist$',algo):
+				elif re.match(r'know_dist',algo):
 					# continue
 					marker='d'
 				elif re.match(r'know_dist_hint_based',algo):
-					continue
+					# continue
 					marker = 'h'
+
+				print algo, marker
 
 				if not ax:
 					ax = plt.subplot(121)
