@@ -5,7 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-sns.set_style("whitegrid")
+sns.set(font_scale=3.0, style="whitegrid")
 
 PATH  = "../Networks/"
 N_AVG = 15
@@ -93,7 +93,7 @@ for dataset in series.keys():
 					# continue
 					marker = ','
 				elif re.match(r'baseline_hint_based', algo):
-					# continue
+					continue
 					marker = 's'
 				elif re.match(r'reg_logits',algo):
 					# continue
@@ -102,17 +102,24 @@ for dataset in series.keys():
 					# continue
 					marker='d'
 				elif re.match(r'know_dist_hint_based',algo):
-					# continue
+					continue
 					marker = 'h'
 
 				if not ax:
-					ax = m_avg.plot(kind='line', #title="{0} {1}".format(dataset, net), 
+					ax = plt.subplot(121)
+					m_avg.plot(kind='line', #title="{0} {1}".format(dataset, net), 
 					marker=marker, label="{0} {1}".format(config, algo),
-					legend=True, color=colors[dataset][net][config])#, yerr=m_std)
+					legend=True, color=colors[dataset][net][config], ax=ax)#, yerr=m_std)
 				else:
 					m_avg.plot(kind='line', ax=ax, marker=marker,
 					label="{0} {1}".format(config, algo),
 					legend=True, color=colors[dataset][net][config])#, yerr=m_std)
+
+
+
+
+
+
 
 		for teacher, err in teachers[dataset]:
 			ax.plot(
@@ -120,7 +127,7 @@ for dataset in series.keys():
 				'--',
 				label="Teacher {0}".format(teacher),
 			)
-			ax.legend()
+			ax.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 			ax.set_ylabel("Err. Moving Avg. ({0})".format(N_AVG))
 			ax.set_xlabel("Epochs")
 
