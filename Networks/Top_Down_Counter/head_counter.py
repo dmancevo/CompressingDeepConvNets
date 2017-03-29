@@ -11,8 +11,8 @@ CROP_HEIGHT, CROP_WIDTH = 60, 80
 IMG_HEIGHT, IMG_WIDTH   = 240, 320
 
 
-FOLDER    = "/notebooks/Networks/Top_Down_Student_Networks/saved/student_1/\
-know_dist_T10.0_beta0.05/"
+FOLDER    = "/notebooks/Networks/Top_Down_Student_Networks/saved/student_1_7_10/\
+know_dist_T5.0_beta0.05/"
 
 DATA_PATH = "/notebooks/Data/top_down_view/images/"
 
@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
 	with tf.Session() as sess:
 
-		saver = tf.train.import_meta_graph("{0}student_1.meta".format(FOLDER))
+		saver = tf.train.import_meta_graph("{0}student_1_7_10.meta".format(FOLDER))
 		saver.restore(sess, tf.train.latest_checkpoint(FOLDER))
 		layers = tf.get_collection('layers')
 
