@@ -11,8 +11,11 @@ CROP_HEIGHT, CROP_WIDTH = 60, 80
 IMG_HEIGHT, IMG_WIDTH   = 240, 320
 
 
+# FOLDER    = "/notebooks/Networks/Top_Down_Student_Networks/saved/student_1_7_10/\
+# know_dist_T5.0_beta0.05/"
+
 FOLDER    = "/notebooks/Networks/Top_Down_Student_Networks/saved/student_1_7_10/\
-know_dist_T5.0_beta0.05/"
+baseline/"
 
 DATA_PATH = "/notebooks/Data/top_down_view/images/"
 
@@ -102,5 +105,5 @@ if __name__ == '__main__':
 
 				if j%100==0: print j
 
-			with open("{0}.pkl".format(tt),"wb") as f:
+			with open("{0}_{1}.pkl".format(tt, FOLDER.split('/')[-2]),"wb") as f:
 				pkl.dump((tt_N[J],  n_boxes, S), f)
